@@ -50,8 +50,9 @@ def test_simple_tokens():
     ]
     assert tokenize("3.1") == [
         {"tag":"number","position":0, "value":3.1},
-        {"tag":None,"position":1}
+        {"tag":None,"position":3}
     ]
+    
 
 
 if __name__ == "__main__":
