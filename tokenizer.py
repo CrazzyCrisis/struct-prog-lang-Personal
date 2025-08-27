@@ -1,5 +1,7 @@
 import re
 
+DEBUG_TEXT_FLAG = 0
+
 #Regular expressions, first one tests for numbers, 1) left side as many as possible,
 # 2) right side as much possible, return the key "number
 # second tests for +, return the key "+"
@@ -31,9 +33,11 @@ def tokenize(characters):
         # find first matching token
         for pattern, tag in patterns:
             match = pattern.match(characters, position)
-            #print("{b}, {a}".format(a = pattern,b = tag))
+            if DEBUG_TEXT_FLAG >= 2:
+                print("{b}, {a}".format(a = pattern,b = tag))
             if match:
-                print("MATCH: CHAR:{c}, TAG:{b}, POS:{d}, PATTERN:{a}".format(a = pattern,b = tag,
+                if DEBUG_TEXT_FLAG != 0: 
+                    print("MATCH: CHAR:{c}, TAG:{b}, POS:{d}, PATTERN:{a}".format(a = pattern,b = tag,
                                                                               c=characters[position],d = position))
                 break
 
