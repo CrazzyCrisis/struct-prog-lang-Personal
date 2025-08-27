@@ -23,6 +23,7 @@ for pattern in patterns:
     pattern[0] = re.compile(pattern[0])
 
 #Splits characters into tokens. :)
+#Takes in a string, gets length
 def tokenize(characters):
     tokens = []
     position = 0
@@ -30,7 +31,10 @@ def tokenize(characters):
         # find first matching token
         for pattern, tag in patterns:
             match = pattern.match(characters, position)
+            #print("{b}, {a}".format(a = pattern,b = tag))
             if match:
+                print("MATCH: CHAR:{c}, TAG:{b}, POS:{d}, PATTERN:{a}".format(a = pattern,b = tag,
+                                                                              c=characters[position],d = position))
                 break
 
         assert match
@@ -52,7 +56,7 @@ def tokenize(characters):
             tokens.append(token)
         position = match.end()
 
-
+    #appending end of stream marker.
     tokens.append({
         "tag":None,
         "value":None,
@@ -62,64 +66,83 @@ def tokenize(characters):
 
 #Tests to make sure the tokenizer actually works, will split "2+3" into it's tokenized format and return that to the test. 
 #If the assert passes, we good
-def test_simple_expression():
-    print("Test simple expresssions...")
-    t = tokenize("2+3")
-    assert t == [{'tag': 'number', 'position': 0, 'value': 2}, {'tag': '+', 'position': 1}, {'tag': 'number', 'position': 2, 'value': 3}, {'tag': None, 'position': 3}]
-    print(t)
-    exit(0)
+def test_simple_token():
+    print("test simple token")
+    examples = "+-*/()"
+    for example in examples:
+        t = tokenize(example)[0]
+        assert t["tag"] == example
+        assert t["position"] == 0
+        assert t["value"] == example
+
+def test_number_token():
+    print("test number tokens")
+    for s in ["1","11"]:
+        t = tokenize(s)
+        assert len(t) == 2
+        assert t[0]["tag"] == "number"
+        assert t[0]["value"] == int(s)
+    for s in ["1.1","11.11","11.",".11"]:
+        t = tokenize(s)
+        assert len(t) == 2
+        assert t[0]["tag"] == "number"
+        assert t[0]["value"] == float(s)
 
 #Bunch of little test just to figure out how the tokenizer works
-def test_simple_tokens():
-    print("test simple tokens...")
-    for c in "+-*/":
-        assert tokenize(c) == [
-            {"tag":c,"position":0},
-            {"tag":None,"position":1}
+def test_multiple_tokens():
+    print("test multiple tokens")
+    tokens = tokenize("1+2")
+    assert tokens == [
+        {'tag': 'number', 'position': 0, 'value': 1},
+        {'tag': '+', 'position': 1, 'value': '+'},
+        {'tag': 'number', 'position': 2, 'value': 2}, 
+        {'tag': None, 'value': None, 'position': 3}
         ]
-        print(str(tokenize(c)))
-
-    '''
-    assert tokenize("+") == [
-        {"tag":"+","position":0},
-        {"tag":None,"position":1}
-    ]
-    '''
-    assert tokenize("3") == [
-        {"tag":"number","position":0, "value":3},
-        {"tag":None,"position":1}
-    ]
-    assert tokenize("3.1") == [
-        {"tag":"number","position":0, "value":3.1},
-        {"tag":None,"position":3}
-    ]
-    assert tokenize("31.12") == [
-        {"tag":"number","position":0, "value":31.12},
-        {"tag":None,"position":5}
-    ]
-    assert tokenize("3.1+5.6") == [
-        {"tag":"number","position":0, "value":3.1},
-        {"tag":"+","position":3},
-        {"tag":"number","position":4, "value":5.6},
-        {"tag":None,"position":7}
-    ]
 
 def test_whitespace():
     print("test whitespace")
     tokens = tokenize("1 + 2")
-    '''
     assert tokens == [
-        {"tag":"number", "position": 0, "value": 1},
-        {"tag":"+", "position": 2},
-        {"tag":"number", "position": 4, "value": 2}
+        {'tag': 'number', 'position': 0, 'value': 1},
+        {'tag': '+', 'position': 2, 'value': '+'}, 
+        {'tag': 'number', 'position': 4, 'value': 2}, 
+        {'tag': None, 'value': None, 'position': 5}
         ]
-    '''
+
+def test_keywords():
+    print("test keywords...")
+    for keyword in [
+        "print",
+    ]:
+        t = tokenize(keyword)
+        assert len(t) == 2
+        assert t[0]["tag"] == keyword, f"expected {keyword}, got {t[0]}"
+        assert "value" not in t
+
+def test_identifier_tokens():
+    print("test identifier tokens...")
+    for s in ["x", "y", "z", "alpha", "beta", "gamma"]:
+        t = tokenize(s)
+        assert len(t) == 2
+        assert t[0]["tag"] == "identifier"
+        assert t[0]["value"] == s
 
 
-#Need to learn how this works., how is this running?
+
+def test_error():
+    print("test error")
+    try:
+        t = tokenize("$1+2")
+        assert False, "Should have raised an error for an invalid character."
+    except Exception as e:
+        assert "Syntax error" in str(e),f"Unexpected exception: {e}"
+
+#Need to learn how this works., how is this running if nothing is calling it?
 if __name__ == "__main__":
-    print("testing tokenizer...")
-    test_simple_tokens()
+    test_simple_token()
+    test_number_token()
+    test_multiple_tokens()
     test_whitespace()
-    test_simple_expression()
-    print("done.")
+    test_keywords()
+    test_identifier_tokens()
+    test_error()
