@@ -6,6 +6,7 @@ DEBUG_TEXT_FLAG = 0
 # 2) right side as much possible, return the key "number
 # second tests for +, return the key "+"
 # if anything else is found, return an error
+# This is our formal grammar for our tokenizer
 patterns = [
     [r"print","print"],
     [r"\d*\.\d+|\d+\.\d*|\d+","number"],
