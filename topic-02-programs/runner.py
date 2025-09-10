@@ -2,6 +2,10 @@ import tokenizer
 import parser
 import evaluator
 import sys
+<<<<<<< HEAD:topic-02-programs/runner.py
+=======
+import LIM.evaluator as evaluator
+>>>>>>> e4deb5b (deleting debug print statements):LIM/runner.py
 
 def run(text):
     tokens = tokenizer.tokenize(text)

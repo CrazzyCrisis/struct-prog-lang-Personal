@@ -1,4 +1,5 @@
 from tokenizer import tokenize
+import sys
 
 """
 parser.py -- implement parser for simple expressions
@@ -183,3 +184,4 @@ if __name__ == "__main__":
     test_parse_statement()
     test_parse()
     print("done.")
+    print(str(sys.argv))
