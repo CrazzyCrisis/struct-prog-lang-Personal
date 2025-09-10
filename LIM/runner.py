@@ -1,12 +1,12 @@
 import tokenizer
 import parser
 import sys
-import evaluate
+import LIM.evaluator as evaluator
 
 def run(text):
     tokens = tokenizer.tokenize(text)
     ast = parser.parse(tokens)
-    evaluate.evaluate(ast)
+    evaluator.evaluate(ast)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
