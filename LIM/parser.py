@@ -1,15 +1,13 @@
 from tokenizer import tokenize
 
-DEBUG_TEXT_FLAG = 0
-
 """
 parser.py -- implement parser for simple expressions
 
 Accept a string of tokens, return an AST expressed as stack of dictionaries
 """
 
-"""EBNF Grammar for our language: Standard in software engineering
-    factor = <number> | "(" expression ")"
+ebnf = """
+    factor = <number> | <identifier> | "(" expression ")"
     term = factor { "*"|"/" factor }
     expression = term { "+"|"-" term }
     statement = <print> expression | expression
@@ -32,38 +30,27 @@ Accept a string of tokens, return an AST expressed as stack of dictionaries
     statement = expression 
 """
 
-''' First string is the docstring
-these rules are in EBNF (There is also BNF, Backus-Naur Form)
-(RULE) 
-Always run a test after writing a function.
-'''
-
 def parse_factor(tokens):
     """
-    factor = <number> | "(" expression ")"
+    factor = <number> | <identifier> | "(" expression ")"
     """
-
-    if DEBUG_TEXT_FLAG >= 3: print("parse_factor: START")
 
     token = tokens[0]
     if token["tag"] == "number":
-        if DEBUG_TEXT_FLAG >= 2: print("TOKEN:{a}, TAG:{b}, VALUE:{c}".format(a = tokens[0],b="number",c=tokens[0]["value"]))
-        if DEBUG_TEXT_FLAG >= 3: print("parse_factor: COMPLETE")
-
         return {
             "tag":"number",
             "value": token["value"]
         }, tokens[1:]
     
+    if token["tag"] == "identifer":
+        return {
+            "tag":"identifer",
+            "value": token["value"]
+        }, tokens[1:]
+    
     if token["tag"] == "(":
-        if DEBUG_TEXT_FLAG >= 2: print("TOKEN:{a}, TAG:{b}, VALUE:{c}".format(a = tokens[0],b="/(",c=tokens[0]["value"]))
         ast, tokens = parse_expression(tokens[1:])
         assert tokens[0]["tag"] == ")"
-
-        if DEBUG_TEXT_FLAG >= 2: print("TOKEN:{a}, TAG:{b}, VALUE:{c}".format(a = tokens[0],b="/)",c=tokens[0]["value"]))
-        if DEBUG_TEXT_FLAG >= 3: 
-            print("parse_factor: COMPLETE")
-
         return ast, tokens[1:]
     
     raise Exception(f"Unexpected token '{token['tag']}' at position {token['position']}.")
@@ -75,20 +62,12 @@ def parse_term(tokens):
     term = factor { "*"|"/" factor }
     """
 
-    if DEBUG_TEXT_FLAG >= 3: 
-        print("Parse_Term: START")
-
     node, tokens = parse_factor(tokens)
     
     while tokens[0]["tag"] in ["*","/"]:    
         tag = tokens[0]["tag"]
         right_node, tokens = parse_factor(tokens[1:])
         node = {"tag":tag, "left":node, "right":right_node}
-        if DEBUG_TEXT_FLAG >= 2: 
-            print("TOKEN:{a}, TAG:{b}, RIGHT_NODE:{c}".format(a = tokens[0],b=tokens[0]["tag"],c=right_node))
-
-    if DEBUG_TEXT_FLAG >= 3: 
-        print("Parse_term: COMPLETE")
     return node, tokens
 
 
@@ -97,21 +76,11 @@ def parse_expression(tokens):
     expression = term { "+"|"-" term }
     """
 
-    if DEBUG_TEXT_FLAG >= 3: 
-        print("parse_expression: START")
-
     node, tokens = parse_term(tokens)
     while tokens[0]["tag"] in ["+","-"]:
         tag = tokens[0]["tag"]
         right_node, tokens = parse_term(tokens[1:])
         node = {"tag":tag, "left":node, "right":right_node}
-
-    if DEBUG_TEXT_FLAG >= 2: 
-        for token in tokens:
-            print (token)
-
-    if DEBUG_TEXT_FLAG >= 3: 
-        print("parse_expression: COMPLETE")
 
     return node, tokens
 
@@ -120,8 +89,6 @@ def parse_statement(tokens):
     """
     statement = <print> expression | expression
     """
-    if DEBUG_TEXT_FLAG >= 3: 
-        print("parse_statement: START")
 
     if tokens[0]["tag"] == "print":
         value_ast, tokens = parse_expression(tokens[1:])
@@ -132,13 +99,6 @@ def parse_statement(tokens):
 
     else:
         ast, tokens = parse_expression(tokens)
-
-    if DEBUG_TEXT_FLAG >= 1: 
-        for node in ast:
-            print (node)
-
-    if DEBUG_TEXT_FLAG >= 3: 
-        print("parse_statement: COMPLETE")
     return ast, tokens
 
 
@@ -204,7 +164,9 @@ def test_parse_expression():
     tokens = tokenize("1+(2+3)*4")
     ast, tokens = parse_expression(tokens)
     assert ast == {'tag': '+', 'left': {'tag': 'number', 'value': 1}, 'right': {'tag': '*', 'left': {'tag': '+', 'left': {'tag': 'number', 'value': 2}, 'right': {'tag': 'number', 'value': 3}}, 'right': {'tag': 'number', 'value': 4}}}
-
+    tokens = tokenize("x+y+z")
+    ast, tokens = parse_expression(tokens)
+    print(ast)
 
 
 
@@ -224,9 +186,6 @@ def test_parse_statement():
 
 def parse(tokens):
     ast, tokens = parse_statement(tokens)
-    if DEBUG_TEXT_FLAG >= 1: 
-        for node in ast:
-            print (node)
     return ast
 
 def test_parse():
