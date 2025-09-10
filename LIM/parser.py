@@ -13,23 +13,7 @@ Accept a string of tokens, return an AST expressed as stack of dictionaries
     term = factor { "*"|"/" factor }
     expression = term { "+"|"-" term }
     statement = <print> expression | expression
-"""
-
-"""BNF Grammar for our language: BNF does not allow alternates BNF does allow for optionalities. not using it but I want to show it here.
-    factor = <number>
-    factor = <identifier)
-    factor =  "(" expression ")"
-
-    term = factor { "*"|"/" factor }
-    term = term * factor
-    term = term / factor
-
-    expression = term
-    expression = expression + term
-    expression = expression - term
-
-    statement = <print> expression
-    statement = expression 
+    program = statement { ";" statement }
 """
 
 ''' First string is the docstring
@@ -140,6 +124,14 @@ def parse_statement(tokens):
     if DEBUG_TEXT_FLAG >= 3: 
         print("parse_statement: COMPLETE")
     return ast, tokens
+
+def parse_program():
+    ast, tokens = parse_statement(tokens)
+    while tokens[0]["tag"] == ";":
+        tokens = tokens[1:]
+        ast, tokens = parse_statement(tokens)
+    """He copied/pasted a bunch of stuff, just steal it, stop bothering."""
+
 
 
 """

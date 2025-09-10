@@ -1,0 +1,13 @@
+{
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    // Force the exact Python that has Black 25.1.0
+    "python.defaultInterpreterPath": "/home/codespace/.python/current/bin/python",
+    // Tell the formatter exactly where Black is
+    "black-formatter.path": [
+        "/home/codespace/.python/current/bin/black"
+    ]
+}
