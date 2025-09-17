@@ -17,6 +17,10 @@ patterns = [
     [r"\/","/"],
     [r"\)",")"],
     [r"\(","("],
+<<<<<<< HEAD
+=======
+    [r"\;",";"],
+>>>>>>> 9f0fdf2c5cd5d28ce15cd84a51059c7f6ded3c23
     [r"\s+","whitespace"],
     [r".","error"]
 ]
@@ -73,7 +77,11 @@ def tokenize(characters):
 #If the assert passes, we good
 def test_simple_token():
     print("test simple token")
+<<<<<<< HEAD
     examples = "+-*/()"
+=======
+    examples = "+-*/();"
+>>>>>>> 9f0fdf2c5cd5d28ce15cd84a51059c7f6ded3c23
     for example in examples:
         t = tokenize(example)[0]
         assert t["tag"] == example

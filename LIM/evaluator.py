@@ -6,12 +6,15 @@ printed_string = None
 def evaluate(ast):
     global printed_string
     printed_string = None
+<<<<<<< HEAD
     if ast["tag"] == "program":
         last_value = None
         for statement in ast["statements"]:
             value = evaluate(statement)
             last_value = value
         return last_value
+=======
+>>>>>>> 9f0fdf2c5cd5d28ce15cd84a51059c7f6ded3c23
     if ast["tag"] == "print":
         value = evaluate(ast["value"])
         s = str(value)

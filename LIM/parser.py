@@ -11,6 +11,7 @@ ebnf = """
     term = factor { "*"|"/" factor }
     expression = term { "+"|"-" term }
     statement = <print> expression | expression
+<<<<<<< HEAD
 """
 
 """BNF Grammar for our language: BNF does not allow alternates BNF does allow for optionalities. not using it but I want to show it here.
@@ -28,6 +29,9 @@ ebnf = """
 
     statement = <print> expression
     statement = expression 
+=======
+    program = statement { ";" statement }
+>>>>>>> 9f0fdf2c5cd5d28ce15cd84a51059c7f6ded3c23
 """
 
 def parse_factor(tokens):
@@ -101,6 +105,17 @@ def parse_statement(tokens):
         ast, tokens = parse_expression(tokens)
     return ast, tokens
 
+<<<<<<< HEAD
+=======
+def parse_program():
+    ast, tokens = parse_statement(tokens)
+    while tokens[0]["tag"] == ";":
+        tokens = tokens[1:]
+        ast, tokens = parse_statement(tokens)
+    """He copied/pasted a bunch of stuff, just steal it, stop bothering."""
+
+
+>>>>>>> 9f0fdf2c5cd5d28ce15cd84a51059c7f6ded3c23
 
 """
 ---------------------TESTS-----------------------------
