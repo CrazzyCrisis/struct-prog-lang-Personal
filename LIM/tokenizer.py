@@ -24,8 +24,8 @@ patterns = [
     [r"false","false"],
     [r"if", "if"],
     [r"then", "then"],
-    [r"and", "and"],
-    [r"or", "or"],
+    [r"and", "&&"], 
+    [r"or", "||"],
     [r"\d*\.\d+|\d+\.\d*|\d+", "number"],
     [r"[a-zA-Z_][a-zA-Z0-9_]*", "identifier"],  # identifiers
     [r"\+", "+"],
@@ -45,7 +45,6 @@ patterns = [
     [r"\&\&", "&&"],
     [r"\|\|", "||"],
     [r"\=", "="],
-
     [r"\s+","whitespace"],
     [r".","error"]
 ]
@@ -152,7 +151,9 @@ def test_simple_token():
         [r"\=\=", "=="],
         [r"\!\=", "!="],
         [r"\!", "!"],
+        [r"and", "&&"],
         [r"\&\&", "&&"],
+        [r"or", "||"],
         [r"\|\|", "||"],
         [r"\=", "="]
     ]]
@@ -199,10 +200,7 @@ def test_keywords():
     importantPrint("test keywords...")
     for keyword in [
         "print",
-        "if",
-        "then",
-        "or",
-        "and"
+        "if"
     ]:
         t = tokenize(keyword)
         assert len(t) == 2
