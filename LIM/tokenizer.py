@@ -12,7 +12,10 @@
 
 import re
 
-debugPrintLOD = 0 # At 0, no additional debuging will be printed, at 1 tokens will be printed and tests will be seperated by spaces
+# At 0, no debugging statements will be printed.
+# At 1, testing declarations will be printed.
+# At 2 tokens will be printed and tests will be seperated by spaces.
+debugPrintLOD = 1 
 
 # Define patterns for tokens
 patterns = [
@@ -122,14 +125,14 @@ def tokenizeAppendEndOfStreamMarker(tokens, position):
 
 # prints each entry in a list onto a new line
 def printList(_list):
-    if debugPrintLOD > 0:
+    if debugPrintLOD > 1:
         for x in _list:
             print(x)
         print("------------------------------")
 
 def importantPrint(value):
-    if debugPrintLOD > 0: print(" ")
-    print(value)
+    if debugPrintLOD > 1: print(" ")
+    if debugPrintLOD > 0:print(value)
 
 
 def test_simple_token():
