@@ -1,56 +1,49 @@
 import re
 
-DEBUG_TEXT_FLAG = 0
-
-#Regular expressions, first one tests for numbers, 1) left side as many as possible,
-# 2) right side as much possible, return the key "number
-# second tests for +, return the key "+"
-# if anything else is found, return an error
-# This is our formal grammar for our tokenizer
+# Define patterns for tokens
 patterns = [
     [r"print","print"],
-    [r"\d*\.\d+|\d+\.\d*|\d+","number"],
-    [r"[a-zA-Z_][a-zA-Z0-9_]*","identifier"], #identifiers
-    [r"\+", "+"], 
+    [r"true","true"],
+    [r"false","false"],
+    [r"\d*\.\d+|\d+\.\d*|\d+", "number"],
+    [r"[a-zA-Z_][a-zA-Z0-9_]*", "identifier"],  # identifiers
+    [r"\+", "+"],
     [r"\-", "-"],
-    [r"\*","*"],
-    [r"\/","/"],
-    [r"\)",")"],
-    [r"\(","("],
-<<<<<<< HEAD
-=======
-    [r"\;",";"],
->>>>>>> 9f0fdf2c5cd5d28ce15cd84a51059c7f6ded3c23
+    [r"\*", "*"],
+    [r"\/", "/"],
+    [r"\(", "("],
+    [r"\)", ")"],
+    [r"\;", ";"],
+    [r"\<\=", "<="],
+    [r"\<", "<"],
+    [r"\>\=", ">="],
+    [r"\>", ">"],
+    [r"\=\=", "=="],
+    [r"\!\=", "!="],
+    [r"\!", "!"],
+    [r"\&\&", "&&"],
+    [r"\|\|", "||"],
+    [r"\=", "="],
+
     [r"\s+","whitespace"],
     [r".","error"]
 ]
 
-#takes literal strings in patterns and compiles them into regular expression objects.
 for pattern in patterns:
-    pattern[0] = re.compile(pattern[0])
+    pattern[0] = re.compile(pattern[0]) 
 
-#Splits characters into tokens. :)
-#Takes in a string, gets length
 def tokenize(characters):
     tokens = []
     position = 0
     while position < len(characters):
-        # find first matching token
         for pattern, tag in patterns:
             match = pattern.match(characters, position)
-            if DEBUG_TEXT_FLAG >= 2:
-                print("{b}, {a}".format(a = pattern,b = tag))
             if match:
-                if DEBUG_TEXT_FLAG != 0: 
-                    print("MATCH: CHAR:{c}, TAG:{b}, POS:{d}, PATTERN:{a}".format(a = pattern,b = tag,
-                                                                              c=characters[position],d = position))
                 break
-
         assert match
-
+        # (process errors)
         if tag == "error":
-            raise Exception(f"Syntax error: illegal character :{[match.group(0)]}")
-
+            raise Exception("Syntax error")
         token = {
             "tag":tag,
             "position":position,
@@ -61,27 +54,43 @@ def tokenize(characters):
                 token["value"] = float(token["value"])
             else:
                 token["value"] = int(token["value"])
+        if token["tag"] in ["true","false"]:
+            token["value"] = (token["tag"] == "true")
+            token["tag"] = "boolean"
         if token["tag"] != "whitespace":
             tokens.append(token)
         position = match.end()
-
-    #appending end of stream marker.
+    # append end-of-stream marker
     tokens.append({
         "tag":None,
         "value":None,
         "position":position
-    })    
+    })
     return tokens
 
-#Tests to make sure the tokenizer actually works, will split "2+3" into it's tokenized format and return that to the test. 
-#If the assert passes, we good
 def test_simple_token():
     print("test simple token")
-<<<<<<< HEAD
-    examples = "+-*/()"
-=======
-    examples = "+-*/();"
->>>>>>> 9f0fdf2c5cd5d28ce15cd84a51059c7f6ded3c23
+    examples = [item[1] for item in [
+        [r"\+", "+"],
+        [r"\-", "-"],
+        [r"\*", "*"],
+        [r"\/", "/"],
+        [r"\(", "("],
+        [r"\)", ")"],
+        [r"\;", ";"],
+        [r"\<\=", "<="],
+        [r"\<", "<"],
+        [r"\>\=", ">="],
+        [r"\>", ">"],
+        [r"\=\=", "=="],
+        [r"\!\=", "!="],
+        [r"\!", "!"],
+        [r"\&\&", "&&"],
+        [r"\|\|", "||"],
+        [r"\=", "="]
+    ]]
+
+
     for example in examples:
         t = tokenize(example)[0]
         assert t["tag"] == example
@@ -101,26 +110,23 @@ def test_number_token():
         assert t[0]["tag"] == "number"
         assert t[0]["value"] == float(s)
 
-#Bunch of little test just to figure out how the tokenizer works
+def test_boolean_tokens():
+    print("test boolean tokens")
+    for s in ["true","false"]:
+        t = tokenize(s)
+        assert len(t) == 2
+        assert t[0]["tag"] == "boolean"
+        assert t[0]["value"] == (s == "true")
+
 def test_multiple_tokens():
     print("test multiple tokens")
     tokens = tokenize("1+2")
-    assert tokens == [
-        {'tag': 'number', 'position': 0, 'value': 1},
-        {'tag': '+', 'position': 1, 'value': '+'},
-        {'tag': 'number', 'position': 2, 'value': 2}, 
-        {'tag': None, 'value': None, 'position': 3}
-        ]
+    assert tokens == [{'tag': 'number', 'position': 0, 'value': 1}, {'tag': '+', 'position': 1, 'value': '+'}, {'tag': 'number', 'position': 2, 'value': 2}, {'tag': None, 'value': None, 'position': 3}]
 
 def test_whitespace():
-    print("test whitespace")
+    print("test whitespace...")
     tokens = tokenize("1 + 2")
-    assert tokens == [
-        {'tag': 'number', 'position': 0, 'value': 1},
-        {'tag': '+', 'position': 2, 'value': '+'}, 
-        {'tag': 'number', 'position': 4, 'value': 2}, 
-        {'tag': None, 'value': None, 'position': 5}
-        ]
+    assert tokens == [{'tag': 'number', 'position': 0, 'value': 1}, {'tag': '+', 'position': 2, 'value': '+'}, {'tag': 'number', 'position': 4, 'value': 2}, {'tag': None, 'value': None, 'position': 5}]
 
 def test_keywords():
     print("test keywords...")
@@ -150,10 +156,10 @@ def test_error():
     except Exception as e:
         assert "Syntax error" in str(e),f"Unexpected exception: {e}"
 
-#Need to learn how this works., how is this running if nothing is calling it?
 if __name__ == "__main__":
     test_simple_token()
     test_number_token()
+    test_boolean_tokens()
     test_multiple_tokens()
     test_whitespace()
     test_keywords()
