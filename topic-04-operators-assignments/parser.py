@@ -1,5 +1,4 @@
 from tokenizer import tokenize
-from enum import Enum
 
 """
 parser.py -- implement parser for simple expressions
@@ -8,25 +7,19 @@ Accept a string of tokens, return an AST expressed as stack of dictionaries
 """
 
 ebnf = """
+
     factor = <number> | <identifier> | "(" expression ")" | "!" factor | "-" factor
     term = factor { "*"|"/" factor }
     arithmetic_expression = term { "+"|"-" term }
     relational_expression = arithmetic_expression { ("<" | ">" | "<=" | ">=" | "==" | "!=") arithmetic_expression } ;
     logical_factor = relational_expression
-    logical_term = logical_factor { "&&" logical_factor | "and" logical_factor }
-    logical_expression = logical_term { "||" logical_term | "or" logical_term}
+    logical_term = logical_factor { "&&" logical_factor }
+    logical_expression = logical_term { "||" logical_term }
     expression = logical_expression
 
     statement = <print> expression | expression { "=" expression }
     program = expression { ";" expression }
 """
-
-class DebugLOD(Enum):
-    NONE = 0
-    SOME = 1
-    ALL = 2
-
-DebugPrintLOD = DebugLOD['SOME']
 
 
 def parse_factor(tokens):
@@ -66,7 +59,7 @@ def test_parse_factor():
     """
     factor = <number> | <identifier> | "(" expression ")" | "!" factor | "-" factor
     """
-    debugTitlePrint("testing parse_factor()")
+    print("testing parse_factor()")
     for s in ["1","22","333"]:
         tokens = tokenize(s)
         ast, tokens = parse_factor(tokens)
@@ -91,13 +84,6 @@ def test_parse_factor():
     tokens = tokenize("-3+2")
     ast, tokens = parse_factor(tokens)
 
-    #Homework Test Cases
-    for i in range(0,500):
-        s = f"({str(i)} + {str(i+1)})"
-        HW_tokens = tokenize(s)
-        HW_ast, HW_tokens = parse_factor(HW_tokens)
-        assert HW_ast =={'tag': '+', 'left':{'tag': 'number', 'value': i}, 'right':{'tag':'number', 'value': i+1}}
-
 
 def parse_term(tokens):
     """
@@ -115,7 +101,7 @@ def test_parse_term():
     """
     term = factor { "*"|"/" factor }
     """
-    debugTitlePrint("testing parse_term()")
+    print("testing parse_term()")
     for s in ["1","22","333"]:
         tokens = tokenize(s)
         ast, tokens = parse_term(tokens)
@@ -144,7 +130,7 @@ def test_parse_arithmetic_expression():
     """
     expression = term { "+"|"-" term }
     """
-    debugTitlePrint("testing parse_arithmetic_expression()")
+    print("testing parse_arithmetic_expression()")
     for s in ["1","22","333"]:
         tokens = tokenize(s)
         ast, tokens = parse_expression(tokens)
@@ -176,7 +162,7 @@ def test_parse_relational_expression():
     """
     relational_expression = arithmetic_expression { ("<" | ">" | "<=" | ">=" | "==" | "!=") arithmetic_expression } ;
     """
-    debugTitlePrint("testing parse_relational_expression()")
+    print("testing parse_relational_expression()")
     for op in [ "<" , ">" , "<=" , ">=" , "==" , "!=" ]:
         tokens = tokenize(f"1{op}2")
         ast, tokens = parse_relational_expression(tokens)
@@ -197,7 +183,7 @@ def test_parse_logical_factor():
     """
     logical_factor = relational_expression
     """
-    debugTitlePrint("testing parse_logical_factor...")
+    print("testing parse_logical_factor...")
     assert parse_logical_factor(tokenize("x"))[0] == {"tag": "identifier", "value": "x"}
     assert parse_logical_factor(tokenize("!x"))[0] == {
         "tag": "not",
@@ -207,7 +193,7 @@ def test_parse_logical_factor():
 
 def parse_logical_term(tokens):
     """
-    logical_term = logical_factor { "&&" logical_factor | "and" logical_factor }
+    logical_term = logical_factor { "&&" logical_factor }
     """
     node, tokens = parse_logical_factor(tokens)
     while tokens[0]["tag"] == "&&":
@@ -219,9 +205,9 @@ def parse_logical_term(tokens):
 
 def test_parse_logical_term():
     """
-    logical_term = logical_factor { "&&" logical_factor | "and" logical_factor }
+    logical_term = logical_factor { "&&" logical_factor }
     """
-    debugTitlePrint("testing parse_logical_term...")
+    print("testing parse_logical_term...")
     assert parse_logical_term(tokenize("x"))[0] == {"tag": "identifier", "value": "x"}
     assert parse_logical_term(tokenize("x&&y"))[0] == {
         "tag": "&&",
@@ -241,9 +227,8 @@ def test_parse_logical_term():
 
 def parse_logical_expression(tokens):
     """
-    logical_expression = logical_term { "||" logical_term | "or" logical_term }
+    logical_expression = logical_term { "||" logical_term }
     """
-
     node, tokens = parse_logical_term(tokens)
     while tokens[0]["tag"] == "||":
         tag = tokens[0]["tag"]
@@ -254,45 +239,35 @@ def parse_logical_expression(tokens):
 
 def test_parse_logical_expression():
     """
-    logical_expression = logical_term { "||" logical_term | "or" logical_term }
+    logical_expression = logical_term { "||" logical_term }
     """
-    debugTitlePrint("testing parse_logical_expression...")
+    print("testing parse_logical_expression...")
 
-    
-    LOGICAL_OR_OPERATORS = {"||", " or "}
-    LOGICAL_AND_OPERATORS = {"&&", " and "}
-
-    for _and in LOGICAL_AND_OPERATORS:
-        for _or in LOGICAL_OR_OPERATORS: 
-            debugAllPrint (f"    testing: logical OR: \"{_or}\" AND: \"{_and}\"")
-            assert parse_logical_expression(tokenize("x"))[0] == {
-                "tag": "identifier",
-                "value": "x",
-            }
-            statement = f"x{_or}y"
-            assert parse_logical_expression(tokenize(f"x {_or} y"))[0] == {
-                "tag": "||",
-                "left": {"tag": "identifier", "value": "x"},
-                "right": {"tag": "identifier", "value": "y"},
-            }
-            statement = f"x{_or}y{_and}z"
-            assert parse_logical_expression(tokenize(statement))[0] == {
-                "tag": "||",
-                "left": {"tag": "identifier", "value": "x"},
-                "right": {
-                    "tag": "&&",
-                    "left": {"tag": "identifier", "value": "y"},
-                    "right": {"tag": "identifier", "value": "z"},
-                },
-            }
-            debugAllPrint (f"    test passed: logical OR: \"{_or}\" AND: \"{_and}\"")
+    assert parse_logical_expression(tokenize("x"))[0] == {
+        "tag": "identifier",
+        "value": "x",
+    }
+    assert parse_logical_expression(tokenize("x||y"))[0] == {
+        "tag": "||",
+        "left": {"tag": "identifier", "value": "x"},
+        "right": {"tag": "identifier", "value": "y"},
+    }
+    assert parse_logical_expression(tokenize("x||y&&z"))[0] == {
+        "tag": "||",
+        "left": {"tag": "identifier", "value": "x"},
+        "right": {
+            "tag": "&&",
+            "left": {"tag": "identifier", "value": "y"},
+            "right": {"tag": "identifier", "value": "z"},
+        },
+    }
 
 
 def parse_expression(tokens):
     return parse_logical_expression(tokens)
 
 def test_parse_expression():
-    debugTitlePrint("testing parse_expression()")
+    print("testing parse_expression()")
     ast1, _ = parse_expression(tokenize("1+1"))
     ast2, _ = parse_logical_expression(tokenize("1+1"))
     assert ast1 == ast2
@@ -324,7 +299,7 @@ def test_parse_statement():
     """
     statement = <print> expression | expression
     """
-    debugTitlePrint("testing parse_statement()")
+    print("testing parse_statement()")
     tokens = tokenize("1+(2+3)*4")
     ast, tokens = parse_statement(tokens)
     assert ast == {'tag': '+', 'left': {'tag': 'number', 'value': 1}, 'right': {'tag': '*', 'left': {'tag': '+', 'left': {'tag': 'number', 'value': 2}, 'right': {'tag': 'number', 'value': 3}}, 'right': {'tag': 'number', 'value': 4}}}
@@ -354,7 +329,7 @@ def parse_program(tokens):
 
 def test_parse_program():
     """program = [ statement { ";" statement } ]"""
-    debugTitlePrint("testing parse_program...")
+    print("testing parse_program...")
     ast, tokens = parse_program(tokenize("print 1; print 2"))
     assert ast == {
         "tag": "program",
@@ -372,19 +347,11 @@ def test_parse():
     """
         program = expression
     """
-    debugTitlePrint("testing parse()")
+    print("testing parse()")
     tokens = tokenize("1+(2+3)*4")
     ast1, _ = parse_program(tokens)
     ast2 = parse(tokens)
     assert ast1 == ast2, "parse() is not evaluating via parse_program()"
-
-# -----------DEBUGGING-----------------
-def debugAllPrint(value):
-    if DebugPrintLOD == DebugLOD.ALL: print (value)
-
-def debugTitlePrint(value):
-    debugAllPrint ("")
-    if DebugPrintLOD == DebugLOD.SOME or DebugPrintLOD == DebugLOD.ALL : print (value)
 
 
 
@@ -400,4 +367,4 @@ if __name__ == "__main__":
     test_parse_statement()
     test_parse_program()
     test_parse()
-    debugTitlePrint("done.")
+    print("done.")

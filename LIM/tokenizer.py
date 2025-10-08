@@ -1,87 +1,164 @@
+# TLDR; The Tokenizer/Lexical Analysis breaks the source into Tokens. 
+# Tokens will be defined by the Tokenizer if the source code segment matches a regular expression inside of the patterns dictionary.
+# If there is a match, the Tokenizer will create a new Token, which is basically a dictionary with various properties inside
+# the properties of tokens are the following:
+# tag; All tokens start with a tag, the tag is defined at the end of the regex entry.
+# position; the position that the point in the source code where the token begins
+# value; 
+# a token may look like:
+# {'tag': '+', 'position': 0, 'value': '+'}
+# {'tag': '&&', 'position': 0, 'value': '&&'}
+# {'tag': 'number', 'position': 0, 'value': 11.11}
+
 import re
 
-DEBUG_TEXT_FLAG = 0
+# At 0, no debugging statements will be printed.
+# At 1, testing declarations will be printed.
+# At 2 tokens will be printed and tests will be seperated by spaces.
+debugPrintLOD = 1 
 
-#Regular expressions, first one tests for numbers, 1) left side as many as possible,
-# 2) right side as much possible, return the key "number
-# second tests for +, return the key "+"
-# if anything else is found, return an error
-# This is our formal grammar for our tokenizer
+# Define patterns for tokens
 patterns = [
     [r"print","print"],
-    [r"\d*\.\d+|\d+\.\d*|\d+","number"],
-    [r"[a-zA-Z_][a-zA-Z0-9_]*","identifier"], #identifiers
-    [r"\+", "+"], 
+    [r"true","true"],
+    [r"false","false"],
+    [r"if", "if"],
+    [r"then", "then"],
+    [r"and", "&&"], 
+    [r"or", "||"],
+    [r"\d*\.\d+|\d+\.\d*|\d+", "number"],
+    [r"[a-zA-Z_][a-zA-Z0-9_]*", "identifier"],  # identifiers
+    [r"\+", "+"],
     [r"\-", "-"],
-    [r"\*","*"],
-    [r"\/","/"],
-    [r"\)",")"],
-    [r"\(","("],
-<<<<<<< HEAD
-=======
-    [r"\;",";"],
->>>>>>> 9f0fdf2c5cd5d28ce15cd84a51059c7f6ded3c23
+    [r"\*", "*"],
+    [r"\/", "/"],
+    [r"\(", "("],
+    [r"\)", ")"],
+    [r"\;", ";"],
+    [r"\<\=", "<="],
+    [r"\<", "<"],
+    [r"\>\=", ">="],
+    [r"\>", ">"],
+    [r"\=\=", "=="],
+    [r"\!\=", "!="],
+    [r"\!", "!"],
+    [r"\&\&", "&&"],
+    [r"\|\|", "||"],
+    [r"\=", "="],
     [r"\s+","whitespace"],
     [r".","error"]
 ]
 
-#takes literal strings in patterns and compiles them into regular expression objects.
+# sends the pattern portion of the global patterns dict to the re.compiler, which returns a regex obj (https://docs.python.org/3/library/re.html)
 for pattern in patterns:
-    pattern[0] = re.compile(pattern[0])
+    pattern[0] = re.compile(pattern[0]) 
 
-#Splits characters into tokens. :)
-#Takes in a string, gets length
 def tokenize(characters):
     tokens = []
     position = 0
-    while position < len(characters):
-        # find first matching token
-        for pattern, tag in patterns:
-            match = pattern.match(characters, position)
-            if DEBUG_TEXT_FLAG >= 2:
-                print("{b}, {a}".format(a = pattern,b = tag))
-            if match:
-                if DEBUG_TEXT_FLAG != 0: 
-                    print("MATCH: CHAR:{c}, TAG:{b}, POS:{d}, PATTERN:{a}".format(a = pattern,b = tag,
-                                                                              c=characters[position],d = position))
-                break
-
-        assert match
-
-        if tag == "error":
-            raise Exception(f"Syntax error: illegal character :{[match.group(0)]}")
-
-        token = {
-            "tag":tag,
-            "position":position,
-            "value":match.group(0)
-        }
-        if token["tag"] == "number":
-            if "." in token["value"]:
-                token["value"] = float(token["value"])
-            else:
-                token["value"] = int(token["value"])
-        if token["tag"] != "whitespace":
-            tokens.append(token)
+    while position < len(characters): # While position is less then the length of the characters in the string
+        tag, match = tokenizePatternMatch(characters,position)
+        tokenizeSyntaxErrorCheck(tag)
+        token = tokenizeAssignToken(tag,position,match)
+        tokenizeNumbers(token)
+        tokenizeBooleans(token)
+        tokenizeRemoveWhiteSpace(token,tokens)
         position = match.end()
-
-    #appending end of stream marker.
-    tokens.append({
-        "tag":None,
-        "value":None,
-        "position":position
-    })    
+    tokenizeAppendEndOfStreamMarker(tokens, position)
+    printList(tokens)
     return tokens
 
-#Tests to make sure the tokenizer actually works, will split "2+3" into it's tokenized format and return that to the test. 
-#If the assert passes, we good
+# For each pattern and tag in patterns, this will assign the first property to pattern and second property to tag of the patterns dict
+# assign match to the result of the re.match function, if it doesn't match the current pattern, return false
+# assert (confirm the expression is true) that match is true.
+# Python can return mutiple things without resorting to an array. neat. idk if its preformant or not, but im using it here for my own understanding.
+def tokenizePatternMatch(characters,position):
+    for pattern, tag in patterns: 
+        match = pattern.match(characters, position) 
+        if match:
+            break
+    assert match 
+    return tag, match
+
+# If none of the patterns are matched, we have a syntax error. Make sure the error state is at the bottom of the patterns list.
+def tokenizeSyntaxErrorCheck(tag):
+    if tag == "error": 
+        raise Exception("Syntax error")
+
+# returns a tag and postion found by the match function and returns the whole match group as the value
+# this is statements like "print" are assigned
+def tokenizeAssignToken(tag,position,match):
+    token = { 
+        "tag":tag,
+        "position":position,
+        "value":match.group(0)
+    }
+    return token
+
+# Check for numbers by checking the tag. If tag is "number", check if is a float by looking for a ".", otherwise it's an int.
+def tokenizeNumbers(token):
+    if token["tag"] == "number": 
+        if "." in token["value"]:
+            token["value"] = float(token["value"])
+        else:
+            token["value"] = int(token["value"])
+
+# Check for boolean values by looking for matchest for true/false
+def tokenizeBooleans(token):
+        if token["tag"] in ["true","false"]: 
+            token["value"] = (token["tag"] == "true") # If token["tag"] == true, return true and assign that to value, otherwise assign false
+            token["tag"] = "boolean"
+
+# Throw out the whitespce
+def tokenizeRemoveWhiteSpace(token,tokens):
+    if token["tag"] != "whitespace": 
+        tokens.append(token)
+
+# append end-of-stream marker so the parser knows where to end
+def tokenizeAppendEndOfStreamMarker(tokens, position):
+    tokens.append({
+        "tag":None,
+        "position":position,
+        "value":None
+    })
+
+# prints each entry in a list onto a new line
+def printList(_list):
+    if debugPrintLOD > 1:
+        for x in _list:
+            print(x)
+        print("------------------------------")
+
+def importantPrint(value):
+    if debugPrintLOD > 1: print(" ")
+    if debugPrintLOD > 0:print(value)
+
+
 def test_simple_token():
-    print("test simple token")
-<<<<<<< HEAD
-    examples = "+-*/()"
-=======
-    examples = "+-*/();"
->>>>>>> 9f0fdf2c5cd5d28ce15cd84a51059c7f6ded3c23
+    importantPrint("test simple token")
+    examples = [item[1] for item in [
+        [r"\+", "+"],
+        [r"\-", "-"],
+        [r"\*", "*"],
+        [r"\/", "/"],
+        [r"\(", "("],
+        [r"\)", ")"],
+        [r"\;", ";"],
+        [r"\<\=", "<="],
+        [r"\<", "<"],
+        [r"\>\=", ">="],
+        [r"\>", ">"],
+        [r"\=\=", "=="],
+        [r"\!\=", "!="],
+        [r"\!", "!"],
+        [r"and", "&&"],
+        [r"\&\&", "&&"],
+        [r"or", "||"],
+        [r"\|\|", "||"],
+        [r"\=", "="]
+    ]]
+
+
     for example in examples:
         t = tokenize(example)[0]
         assert t["tag"] == example
@@ -89,7 +166,7 @@ def test_simple_token():
         assert t["value"] == example
 
 def test_number_token():
-    print("test number tokens")
+    importantPrint("test number tokens")
     for s in ["1","11"]:
         t = tokenize(s)
         assert len(t) == 2
@@ -101,31 +178,29 @@ def test_number_token():
         assert t[0]["tag"] == "number"
         assert t[0]["value"] == float(s)
 
-#Bunch of little test just to figure out how the tokenizer works
+def test_boolean_tokens():
+    importantPrint("test boolean tokens")
+    for s in ["true","false"]:
+        t = tokenize(s)
+        assert len(t) == 2
+        assert t[0]["tag"] == "boolean"
+        assert t[0]["value"] == (s == "true")
+
 def test_multiple_tokens():
-    print("test multiple tokens")
+    importantPrint("test multiple tokens")
     tokens = tokenize("1+2")
-    assert tokens == [
-        {'tag': 'number', 'position': 0, 'value': 1},
-        {'tag': '+', 'position': 1, 'value': '+'},
-        {'tag': 'number', 'position': 2, 'value': 2}, 
-        {'tag': None, 'value': None, 'position': 3}
-        ]
+    assert tokens == [{'tag': 'number', 'position': 0, 'value': 1}, {'tag': '+', 'position': 1, 'value': '+'}, {'tag': 'number', 'position': 2, 'value': 2}, {'tag': None, 'value': None, 'position': 3}]
 
 def test_whitespace():
-    print("test whitespace")
+    importantPrint("test whitespace...")
     tokens = tokenize("1 + 2")
-    assert tokens == [
-        {'tag': 'number', 'position': 0, 'value': 1},
-        {'tag': '+', 'position': 2, 'value': '+'}, 
-        {'tag': 'number', 'position': 4, 'value': 2}, 
-        {'tag': None, 'value': None, 'position': 5}
-        ]
+    assert tokens == [{'tag': 'number', 'position': 0, 'value': 1}, {'tag': '+', 'position': 2, 'value': '+'}, {'tag': 'number', 'position': 4, 'value': 2}, {'tag': None, 'value': None, 'position': 5}]
 
 def test_keywords():
-    print("test keywords...")
+    importantPrint("test keywords...")
     for keyword in [
         "print",
+        "if"
     ]:
         t = tokenize(keyword)
         assert len(t) == 2
@@ -133,7 +208,7 @@ def test_keywords():
         assert "value" not in t
 
 def test_identifier_tokens():
-    print("test identifier tokens...")
+    importantPrint("test identifier tokens...")
     for s in ["x", "y", "z", "alpha", "beta", "gamma"]:
         t = tokenize(s)
         assert len(t) == 2
@@ -143,17 +218,17 @@ def test_identifier_tokens():
 
 
 def test_error():
-    print("test error")
+    importantPrint("test error")
     try:
         t = tokenize("$1+2")
         assert False, "Should have raised an error for an invalid character."
     except Exception as e:
         assert "Syntax error" in str(e),f"Unexpected exception: {e}"
 
-#Need to learn how this works., how is this running if nothing is calling it?
 if __name__ == "__main__":
     test_simple_token()
     test_number_token()
+    test_boolean_tokens()
     test_multiple_tokens()
     test_whitespace()
     test_keywords()

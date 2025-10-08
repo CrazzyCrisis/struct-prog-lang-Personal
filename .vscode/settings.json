@@ -9,5 +9,6 @@
     // Tell the formatter exactly where Black is
     "black-formatter.path": [
         "/home/codespace/.python/current/bin/black"
-    ]
+    ],
+    "debug.allowBreakpointsEverywhere": true
 }
