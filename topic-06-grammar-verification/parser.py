@@ -541,7 +541,7 @@ def test_parse_statement():
 
 def parse_program(tokens):
     """
-    program = [ statement { ";" statement } ]
+    program = [ statement { ";" statement } ] ;
     """
     statements = []
     if tokens[0]["tag"]:

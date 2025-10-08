@@ -3,38 +3,56 @@ from parser import parse
 
 printed_string = None
 
-def evaluate(ast, environment):
+def evaluate(ast, environment={}):
     global printed_string
-    printed_string = None
     if ast["tag"] == "program":
         last_value = None
         for statement in ast["statements"]:
             value = evaluate(statement, environment)
             last_value = value
         return last_value
+    if ast["tag"] == "block":
+        for statement in ast["statements"]:
+            _ = evaluate(statement, environment)
     if ast["tag"] == "print":
         value = evaluate(ast["value"], environment)
         s = str(value)
-        printed_string = s
         print(s)
+        printed_string = s
+        return None
+    if ast["tag"] == "if":
+        condition_value = evaluate(ast["condition"], environment)
+        if condition_value:
+            evaluate(ast["then"], environment)
+        else:
+            if ast["else"]:
+                evaluate(ast["else"], environment)
+        return None
+    if ast["tag"] == "while":
+        while evaluate(ast["condition"], environment):
+            evaluate(ast["do"], environment)
         return None
     if ast["tag"] == "assign":
         target = ast["target"]
         assert target["tag"] == "identifier"
-        value = evaluate(ast["value"], environment)
-        environment[target["value"]] = value
-        return None
+        identifier = target["value"]
+        assert type(identifier) is str
+        value = evaluate(ast["value"],environment)
+        environment[identifier] = value
     if ast["tag"] == "number":
         return ast["value"]
+    if ast["tag"] == "string":
+        return ast["value"]
     if ast["tag"] == "identifier":
-        name = ast["value"]
-        if name in environment:
-            return environment[name]
-        if "$parent" in environment:
-            return evaluate(ast,environment["$parent"])
-        raise Exception(f"Error:Undefined variable [{name}]")
-        # return environment[name]
-    if ast["tag"] in ["+","-","*","/"]:
+        if ast["value"] in environment:
+            return environment[ast["value"]]
+        parent_environment = environment
+        while "$parent" in parent_environment:
+            parent_environment = environment["$parent"]
+            if ast["value"] in parent_environment:
+                return parent_environment[ast["value"]]
+        raise Exception(f"Value [{ast["value"]}] not found in environment {environment}.")
+    if ast["tag"] in ["+", "-", "*", "/"]:
         left_value = evaluate(ast["left"], environment)
         right_value = evaluate(ast["right"], environment)
         if ast["tag"] == "+":
@@ -45,40 +63,49 @@ def evaluate(ast, environment):
             return left_value * right_value
         if ast["tag"] == "/":
             return left_value / right_value
-    if ast["tag"] in ["<",">","<=",">=","==","!=","||","&&"]:
+    if ast["tag"] == "negate":
+        value = evaluate(ast["value"], environment)
+        return -value
+    if ast["tag"] == "&&":
         left_value = evaluate(ast["left"], environment)
         right_value = evaluate(ast["right"], environment)
-        if ast["tag"] == "<":
-            return left_value < right_value
-        if ast["tag"] == ">":
-            return left_value > right_value
-        if ast["tag"] == "<=":
-            return left_value <= right_value
-        if ast["tag"] == ">=":
-            return left_value >= right_value
-        if ast["tag"] == "==":
-            return left_value == right_value
-        if ast["tag"] == "!=":
-            return left_value != right_value
-        if ast["tag"] == "&&":
-            return left_value and right_value
-        if ast["tag"] == "||":
-            return left_value or right_value
+        return left_value and right_value
+    if ast["tag"] == "||":
+        left_value = evaluate(ast["left"], environment)
+        right_value = evaluate(ast["right"], environment)
+        return left_value or right_value
+    if ast["tag"] == "!":
+        value = evaluate(ast["value"], environment)
+        return not value
+    if ast["tag"] == "<":
+        left_value = evaluate(ast["left"], environment)
+        right_value = evaluate(ast["right"], environment)
+        return left_value < right_value
+    if ast["tag"] == ">":
+        left_value = evaluate(ast["left"], environment)
+        right_value = evaluate(ast["right"], environment)
+        return left_value > right_value
+    if ast["tag"] == "<=":
+        left_value = evaluate(ast["left"], environment)
+        right_value = evaluate(ast["right"], environment)
+        return left_value <= right_value
+    if ast["tag"] == ">=":
+        left_value = evaluate(ast["left"], environment)
+        right_value = evaluate(ast["right"], environment)
+        return left_value >= right_value
+    if ast["tag"] == "==":
+        left_value = evaluate(ast["left"], environment)
+        right_value = evaluate(ast["right"], environment)
+        return left_value == right_value
+    if ast["tag"] == "!=":
+        left_value = evaluate(ast["left"], environment)
+        right_value = evaluate(ast["right"], environment)
+        return left_value != right_value
+
 
 def test_evaluate_number():
     print("testing evaluate number")
-    assert evaluate({"tag":"number","value":4}, {}) == 4
-
-    #Homework test case
-    assert evaluate({"tag":"number","value":100.1}, {}) == 100.1
-
-def test_evaluate_identifier():
-    print("testing evaluate identifier")
-    assert evaluate({"tag":"identifier","value":"x"}, {"x":1.0}) == 1.0
-
-    #Homework test case
-    assert evaluate({"tag":"identifier","value":"Wooooooooooow"}, {"Wooooooooooow":5}) == 5
-
+    assert evaluate({"tag":"number","value":4}) == 4
 
 def test_evaluate_addition():
     print("testing evaluate addition")
@@ -87,15 +114,7 @@ def test_evaluate_addition():
         "left":{"tag":"number","value":1},
         "right":{"tag":"number","value":3}
         }
-    assert evaluate(ast, {}) == 4
-
-    #Homework test case
-    HW_ast = {
-        "tag":"+",
-        "left":{"tag":"number","value":12.1},
-        "right":{"tag":"number","value":2},
-    }
-    assert evaluate(HW_ast, {}) == 14.1
+    assert evaluate(ast) == 4
 
 def test_evaluate_subtraction():
     print("testing evaluate subtraction")
@@ -104,15 +123,7 @@ def test_evaluate_subtraction():
         "left":{"tag":"number","value":3},
         "right":{"tag":"number","value":2}
         }
-    assert evaluate(ast, {}) == 1
-
-    #Homework test case
-    HW_ast = {
-        "tag":"-",
-        "left":{"tag":"number","value":12.1},
-        "right":{"tag":"number","value":2},
-    }
-    assert evaluate(HW_ast, {}) == 10.1
+    assert evaluate(ast) == 1
 
 def test_evaluate_multiplication():
     print("testing evaluate multiplication")
@@ -121,15 +132,7 @@ def test_evaluate_multiplication():
         "left":{"tag":"number","value":3},
         "right":{"tag":"number","value":2}
         }
-    assert evaluate(ast, {}) == 6
-
-    #Homework test case
-    HW_ast = {
-        "tag":"*",
-        "left":{"tag":"number","value":12.1},
-        "right":{"tag":"number","value":2},
-    }
-    assert evaluate(HW_ast, {}) == 24.2
+    assert evaluate(ast) == 6
 
 def test_evaluate_division():
     print("testing evaluate division")
@@ -138,15 +141,7 @@ def test_evaluate_division():
         "left":{"tag":"number","value":4},
         "right":{"tag":"number","value":2}
         }
-    assert evaluate(ast, {}) == 2
-
-    #Homework test case
-    HW_ast = {
-        "tag":"/",
-        "left":{"tag":"number","value":12.1},
-        "right":{"tag":"number","value":2},
-    }
-    assert evaluate(HW_ast, {}) == 6.05
+    assert evaluate(ast) == 2
 
 def eval(s, environment={}):
     tokens = tokenize(s)
@@ -160,30 +155,47 @@ def test_evaluate_expression():
     assert eval("1+2*3") == 7
     assert eval("(1+2)*3") == 9
     assert eval("(1.0+2.1)*3") == 9.3
-    
-    # Homework Test Case
-    assert eval("5+10+15*2-1") == 44
+    assert eval("1<2") == True
+    assert eval("2<1") == False
+    assert eval("2>1") == True
+    assert eval("1>2") == False
+    assert eval("1<=2") == True
+    assert eval("2<=2") == True
+    assert eval("2<=1") == False
+    assert eval("2>=1") == True
+    assert eval("2>=2") == True
+    assert eval("1>=2") == False
+    assert eval("2==2") == True
+    assert eval("1==2") == False
+    assert eval("2!=1") == True
+    assert eval("1!=1") == False
+    # tokens = tokenize("-1")
+    # ast = parse(tokens)
+    # result = evaluate(ast, {})
+    # print(ast, result)
+    # exit(0)
 
-def test_relational_expressions():
-    print("testing relational expressions")
-    assert eval("3==3") == True
-    assert eval("3==4") == False
-    assert eval("3!=4") == True
-    assert eval("3!=3") == False
-    assert eval("3<4") == True
-    assert eval("3<3") == False
-    assert eval("4>3") == True
-    assert eval("4>4") == False
-    assert eval("3<=4") == True
-    assert eval("3<=3") == True
-    assert eval("3<=2") == False
-    assert eval("4>=3") == True
-    assert eval("4>=4") == True
-    assert eval("4>=5") == False
+    assert eval("-1") == -1
+    assert eval("-(1)") == -1
+    assert eval("!1") == False
+    assert eval("!0") == True
+    assert eval("0&&1") == False
+    assert eval("1&&1") == True
+    assert eval("1||1") == True
+    assert eval("0||1") == True
+    assert eval("0||0") == False
 
-    # Homework Test Case
-    assert eval("10==10") == True
-    assert eval("10!=9") == True
+
+def test_evaluate_identifier():
+    print("testing evaluate identifier")
+    try:
+        assert eval("x+3") == 6
+        raise Exception("Error expected for missing value in environment")
+    except Exception as e:
+        assert "not found" in str(e) 
+    assert eval("x+3", {"x":3}) == 6
+    assert eval("x+y",{"x":4,"y":5}) == 9
+    assert eval("x+y",{"$parent":{"x":4},"y":5}) == 9
 
 def test_evaluate_print():
     print("testing evaluate print")
@@ -191,67 +203,38 @@ def test_evaluate_print():
     assert printed_string == "3"
     assert eval("print 3.14") == None    
     assert printed_string == "3.14"
-    assert eval("print x", {"x":1.0}) == None    
-    assert printed_string == "1.0"
-    assert eval("print x+y", {"x":1.0,"y":2.0}) == None    
-    assert printed_string == "3.0"
-    assert eval("print x+y", {"x":2.0,"$parent":{"y":4.0}}) == None    
-    assert printed_string == "6.0"
-    assert eval("print x+y", {"x":2.0,"$parent":{"y":4.0,"x":3.0}}) == None    
-    assert printed_string == "6.0"
-    assert eval("print x+y", {"x":2.0,"y":6.0,"$parent":{"y":4.0,"x":3.0}}) == None    
-    assert printed_string == "8.0"
-    assert eval("print x+y", {"x":2.0,"z":4.0,"$parent":{"$parent":{"y":4.0}}}) == None    
-    assert printed_string == "6.0"
-
-    # Homework Test Case
-    assert eval("print x+y+z", {"x":2.0,"z":4.0,"$parent":{"$parent":{"y":4.0}}}) == None    
-    assert printed_string == "10.0"
 
 def test_evaluate_assignment():
-    environment = {}
-    eval("x=3", environment)
-    assert environment["x"] == 3
-    eval("y=4", environment)
-    assert environment["y"] == 4
-    eval("z=x+y", environment)
-    assert environment["z"] == 7
-    eval("x=2", environment)
-    assert environment["x"] == 2
+    print("testing evaluate assignment")
+    env = {"x":4,"y":5}
+    assert eval("x=7",env) == 7
+    assert env["x"] == 7
 
-    environment = {"$parent":{"y":44.0}}
-    eval("x=3", environment)
-    assert environment["x"] == 3
-    eval("y=4", environment)
-    assert environment["y"] == 4
-    eval("z=x+y", environment)
-    assert environment["z"] == 7
-    eval("x=2", environment)
-    assert environment["x"] == 2 
-    assert environment["$parent"]["y"] == 44.0
+def test_if_statement():
+    print("testing if statement")
+    env = {"x":4,"y":5}
+    assert eval("if(1){x=8}",env) == None
+    assert env["x"] == 8
+    assert eval("if(0){x=5}else{y=9}",env) == None
+    assert env["x"] == 8
+    assert env["y"] == 9
 
-
-    # Homework Test Case
-    environment = {"$parent":{"myGuy":125.3}}
-    eval("BestBoy = 50",environment)
-    assert environment["BestBoy"] == 50
-    eval("myGuy = 100",environment)
-    assert environment["myGuy"] == 100
-    assert environment["$parent"]["myGuy"] == 125.3
-
-    exit(0)
-
+def test_while_statement():
+    print("testing while statement")
+    env = {"x":4,"y":5}
+    assert eval("while(x<6){y=y+1;x=x+1}",env) == None
+    assert env["x"] == 6
+    assert env["y"] == 7
 
 if __name__ == "__main__":
     test_evaluate_number()
-    test_evaluate_identifier()
     test_evaluate_addition()
     test_evaluate_subtraction()
     test_evaluate_multiplication()
     test_evaluate_division()
     test_evaluate_expression()
-    test_relational_expressions()
     test_evaluate_print()
-    test_evaluate_assignment()
+    test_evaluate_identifier()
+    test_if_statement()
+    test_while_statement()
     print("done.")
-

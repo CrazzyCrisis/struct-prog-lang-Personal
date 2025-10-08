@@ -20,13 +20,20 @@ debugPrintLOD = 1
 # Define patterns for tokens
 patterns = [
     [r"print","print"],
+    [r"if","if"],
+    [r"else","else"],
+    [r"while","while"],
+    [r"continue","continue"],
+    [r"break","break"],
+    [r"return","return"],
+    [r"assert","assert"],
+    [r"and","&&"],
+    [r"or","||"],
+    [r"not","!"],
     [r"true","true"],
     [r"false","false"],
-    [r"if", "if"],
-    [r"then", "then"],
-    [r"and", "&&"], 
-    [r"or", "||"],
     [r"\d*\.\d+|\d+\.\d*|\d+", "number"],
+    [r'"([^"]|"")*"', "string"],  # string literals
     [r"[a-zA-Z_][a-zA-Z0-9_]*", "identifier"],  # identifiers
     [r"\+", "+"],
     [r"\-", "-"],
@@ -34,17 +41,23 @@ patterns = [
     [r"\/", "/"],
     [r"\(", "("],
     [r"\)", ")"],
+    [r"\)", ")"],
+    [r"==", "=="],
+    [r"!=", "!="],
+    [r"<=", "<="],
+    [r">=", ">="],
+    [r"<", "<"],
+    [r">", ">"],
+    [r"\=", "="],
     [r"\;", ";"],
-    [r"\<\=", "<="],
-    [r"\<", "<"],
-    [r"\>\=", ">="],
-    [r"\>", ">"],
-    [r"\=\=", "=="],
-    [r"\!\=", "!="],
-    [r"\!", "!"],
     [r"\&\&", "&&"],
     [r"\|\|", "||"],
-    [r"\=", "="],
+    [r"\!", "!"],
+    [r"\{", "{"],
+    [r"\}", "}"],
+    [r"\[", "["],
+    [r"\]", "]"],
+    [r"\.", "."],
     [r"\s+","whitespace"],
     [r".","error"]
 ]
@@ -61,6 +74,7 @@ def tokenize(characters):
         tokenizeSyntaxErrorCheck(tag)
         token = tokenizeAssignToken(tag,position,match)
         tokenizeNumbers(token)
+        tokenizeStrings(token)
         tokenizeBooleans(token)
         tokenizeRemoveWhiteSpace(token,tokens)
         position = match.end()
@@ -103,6 +117,11 @@ def tokenizeNumbers(token):
         else:
             token["value"] = int(token["value"])
 
+# Check for string values by looking for matches for strings
+def tokenizeStrings(token):
+    if token["tag"] == "string": 
+        token["value"] = token["value"][1:-1].replace('""', '"') # Remove the quotes and replace double quotes with single quotes
+
 # Check for boolean values by looking for matchest for true/false
 def tokenizeBooleans(token):
         if token["tag"] in ["true","false"]: 
@@ -136,27 +155,13 @@ def importantPrint(value):
 
 def test_simple_token():
     importantPrint("test simple token")
-    examples = [item[1] for item in [
-        [r"\+", "+"],
-        [r"\-", "-"],
-        [r"\*", "*"],
-        [r"\/", "/"],
-        [r"\(", "("],
-        [r"\)", ")"],
-        [r"\;", ";"],
-        [r"\<\=", "<="],
-        [r"\<", "<"],
-        [r"\>\=", ">="],
-        [r"\>", ">"],
-        [r"\=\=", "=="],
-        [r"\!\=", "!="],
-        [r"\!", "!"],
-        [r"and", "&&"],
-        [r"\&\&", "&&"],
-        [r"or", "||"],
-        [r"\|\|", "||"],
-        [r"\=", "="]
-    ]]
+    examples = "+-*/()=;<>{}[]."
+    for example in examples:
+        t = tokenize(example)[0]
+        assert t["tag"] == example
+        assert t["position"] == 0
+        assert t["value"] == example
+    examples = "==\t!=\t<=\t>=\t&&\t||\t!".split("\t")
 
 
     for example in examples:
@@ -178,6 +183,14 @@ def test_number_token():
         assert t[0]["tag"] == "number"
         assert t[0]["value"] == float(s)
 
+def test_string_tokens():
+    print("test string tokens")
+    for s in ['"1"','"abc"','""']:
+        t = tokenize(s)
+        assert len(t) == 2
+        assert t[0]["tag"] == "string"
+        assert t[0]["value"] == s[1:-1]
+
 def test_boolean_tokens():
     importantPrint("test boolean tokens")
     for s in ["true","false"]:
@@ -197,10 +210,9 @@ def test_whitespace():
     assert tokens == [{'tag': 'number', 'position': 0, 'value': 1}, {'tag': '+', 'position': 2, 'value': '+'}, {'tag': 'number', 'position': 4, 'value': 2}, {'tag': None, 'value': None, 'position': 5}]
 
 def test_keywords():
-    importantPrint("test keywords...")
+    print("test keywords...")
     for keyword in [
-        "print",
-        "if"
+        "print","if","else","while","continue","break","return","assert"
     ]:
         t = tokenize(keyword)
         assert len(t) == 2
@@ -228,6 +240,7 @@ def test_error():
 if __name__ == "__main__":
     test_simple_token()
     test_number_token()
+    test_string_tokens()
     test_boolean_tokens()
     test_multiple_tokens()
     test_whitespace()
