@@ -20,6 +20,7 @@ def main():
         for arg in sys.argv[1:]:
             if arg.startswith("watch="):
                 watch_variable = arg.split("=", 1)[1]
+                environment["$watch"] = watch_variable  # Store in environment
             else:
                 filename = arg
         
@@ -30,7 +31,7 @@ def main():
             try:
                 tokens = tokenize(source_code)
                 ast = parse(tokens, track_lines=(watch_variable is not None))
-                final_value, exit_status = evaluate(ast, environment, watch_variable=watch_variable)
+                final_value, exit_status = evaluate(ast, environment)
                 if exit_status == "exit":
                     # print(f"Exiting with code: {final_value}") # Optional debug print
                     sys.exit(final_value if isinstance(final_value, int) else 0)
@@ -54,7 +55,7 @@ def main():
                 # Tokenize, parse, and execute the code
                 tokens = tokenize(source_code)
                 ast = parse(tokens)
-                final_value, exit_status = evaluate(ast, environment, watch_variable=watch_variable)
+                final_value, exit_status = evaluate(ast, environment)
                 if exit_status == "exit":
                     print(f"Exiting with code: {final_value}") # REPL can print this
                     sys.exit(final_value if isinstance(final_value, int) else 0)
