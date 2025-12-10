@@ -549,3 +549,37 @@ assert pos_counter(2) == 17;
 
 print "Chapter 11 tests completed.";
 
+print "Project Addition: Switch Statements";
+
+x = 5;
+switch(x) {
+    case 1: {print "something horrible has happened"}
+    case 2,5: {print "wow this actually works"}
+    default: {print "default value for big dummies"}
+};
+
+print "Switch testing: multiple vars above switch statement";
+x = 2;
+y = 5;
+z = x + y;
+switch(z) {
+    case 7: {print "heeyyyyyy it added correctly"}
+    default: {print "woooow I am really not good at this!"}
+};
+
+print "Switch testing: String vars";
+x = "This is kinda cool!";
+switch(x) {
+    case "this Is Kinda Cool!": {print "pretty sure case sensitivity should matter..."}
+    case "This is kinda cool!": {print x + " it really is"}
+    default: {print "woooow I am really not good at this!"}
+};
+
+print "Switch testing: running the next case in list";
+x = 5;
+switch(x) {
+    case 1,2,3: {print "wowie batman"}
+    case 5: {} //This is no good!
+    case 7:  {print "inputting 5 should not run case 7"}
+    default: {print "everything is broken!"}
+};

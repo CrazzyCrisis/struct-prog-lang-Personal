@@ -35,7 +35,7 @@ grammar = """
     print_statement = "print" [ expression ]
     function_statement = "function" identifier "(" [ identifier { "," identifier } ] ")" statements
 
-    statement = if_statement | switch_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
+    statement = if_statement | switch_statement | case_statement | default_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
     statement_list = "{" statement { ";" statement } "}"
 
     if_statement = "if" "(" expression ")" statement_list [ "else" (if_statement | statement_list) ]
@@ -1235,7 +1235,7 @@ def parse_case_statement(tokens):
     
     # Parse additional case values (case 1, 2, 3:)
     while tokens[0]["tag"] == ",":
-        tokens = tokens[1:]
+        tokens = tokens[1:] 
         value, tokens = parse_expression(tokens)
         values.append(value)
     
@@ -1674,7 +1674,7 @@ def test_parse_function_statement():
 
 def parse_statement(tokens):
     """
-    statement = if_statement | switch_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
+    statement = if_statement | switch_statement | case_statement | default_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
     """
     tag = tokens[0]["tag"]
     # note: none of these consumes a token
@@ -1705,7 +1705,7 @@ def parse_statement(tokens):
 
 def test_parse_statement():
     """
-    statement = if_statement | switch_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
+    statement = if_statement | switch_statement | case_statement | default_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
     """
     print("testing parse_statement...")
 
@@ -1718,6 +1718,10 @@ def test_parse_statement():
     assert (
         parse_statement(tokenize("switch(1){case 1: {print 5}}"))
         == parse_switch_statement(tokenize("switch(1){case 1: {print 5}}"))
+    )
+    assert (
+        parse_statement(tokenize("switch(2){case 1: {print 5} default: {print 000}}"))
+        == parse_switch_statement(tokenize("switch(2){case 1: {print 5} default: {print 000}}"))
     )
     # # while statement
     assert (

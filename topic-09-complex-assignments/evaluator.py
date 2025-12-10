@@ -740,7 +740,7 @@ def test_evaluate_switch_statement():
     equals("x=99; switch(x) { case 1: { y=10 } default: { y=999 } }", {}, 999, {"x": 99, "y": 999})
     equals("x=7; switch(x) { case 1, 7: { y=100 } }", {}, 100, {"x": 7, "y": 100})
     equals("x=1; switch(x) { case 1: { y=10; break; y=99 } }", {}, None, {"x": 1, "y": 10})
-    equals("x=1; switch(x) { case 1: { y=10; case 2: y=99 } }", {}, 99, {"x": 1, "y": 10})
+    equals("x=1; switch(x) { case 1: { y=10; } case 2: { y=99 } }", {}, 10, {"x": 1, "y": 10})
     equals('s="hello"; switch(s) { case "world": { y=1 } case "hello": { y=2 } }', {}, 2, {"s": "hello", "y": 2})
 
 
