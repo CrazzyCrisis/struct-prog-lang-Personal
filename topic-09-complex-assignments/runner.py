@@ -30,7 +30,7 @@ def main():
                 source_code = f.read()
             try:
                 tokens = tokenize(source_code)
-                ast = parse(tokens, track_lines=(watch_variable is not None))
+                ast = parse(tokens)
                 final_value, exit_status = evaluate(ast, environment)
                 if exit_status == "exit":
                     # print(f"Exiting with code: {final_value}") # Optional debug print
