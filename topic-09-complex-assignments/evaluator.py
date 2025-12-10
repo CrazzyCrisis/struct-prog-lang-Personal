@@ -589,6 +589,13 @@ def evaluate(ast, environment):
         if value_status == "exit": return value, "exit"
 
         target_base[target_index] = value
+        
+        # Watch variable tracking
+        watch_variable = environment.get("$watch")
+        if watch_variable and target_index == watch_variable:
+            line = ast.get("line", "unknown")
+            print(f"[WATCH] Variable '{watch_variable}' changed at line {line}: {value}")
+        
         return value, None
 
     if ast["tag"] == "return":
@@ -790,25 +797,25 @@ def test_evaluate_function_literal():
     print("test evaluate_function_literal")
     code = "f=function(x) {1}"
     ast = parse(tokenize(code))
-    equals(code, {}, {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 11}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 1}]}}, {'f': {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 11}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 1}]}}}
+    equals(code, {}, {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 11}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 1, 'line': 1}]}}, {'f': {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 11}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 1, 'line': 1}]}}}
     )
     code = "function f(x) {1}"
     ast = parse(tokenize(code))
-    equals(code, {}, {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 11}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 1}]}}, {'f': {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 11}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 1}]}}}
+    equals(code, {}, {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 11}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 1, 'line': 1}]}}, {'f': {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 11}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 1, 'line': 1}]}}}
     )
 
 def test_evaluate_function_call():
     print("test evaluate_function_call")
-    environment = {}
+    environment = {}    
     code = "function f() {return(1234)}"
     result, _ = evaluate(parse(tokenize(code)), environment)
-    assert clean(environment) == {'f': {'tag': 'function', 'parameters': [], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'return', 'value': {'tag': 'number', 'value': 1234}}]}}}
+    assert clean(environment) == {'f': {'tag': 'function', 'parameters': [], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'return', 'value': {'tag': 'number', 'value': 1234, 'line': 1}}]}}}
     ast = parse(tokenize("f()"))
     assert ast == {
         "statements": [
             {
                 "arguments": [],
-                "function": {"tag": "identifier", "value": "f"},
+                "function": {"tag": "identifier", "value": "f", "line": 1},
                 "tag": "call",
             }
         ],
