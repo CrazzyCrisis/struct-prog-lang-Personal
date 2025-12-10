@@ -444,7 +444,7 @@ def evaluate(ast, environment):
                 if body_status == "break":
                     return None, None  # Break exits the switch, switch completes normally
                 if body_status == "continue":
-                    raise Exception("'continue' statement not valid in switch (must be in loop)")
+                    raise Exception("'continue' statement not valid in switch")
                 
                 # If no break, execution falls through to next case
                 return val, None
@@ -458,7 +458,7 @@ def evaluate(ast, environment):
             if default_status == "break":
                 return None, None  # Break exits the switch
             if default_status == "continue":
-                raise Exception("'continue' statement not valid in switch (must be in loop)")
+                raise Exception("'continue' statement not valid in switch")
             
             return val, None
         
