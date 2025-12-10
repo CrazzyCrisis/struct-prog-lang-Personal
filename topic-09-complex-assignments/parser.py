@@ -64,7 +64,10 @@ def parse_simple_expression(tokens):
     token = tokens[0]
 
     if token["tag"] in {"identifier", "boolean", "number", "string"}:
-        return {"tag": token["tag"], "value": token["value"]}, tokens[1:]
+        node = {"tag": token["tag"], "value": token["value"]}
+        if "line" in token:
+            node["line"] = token["line"]
+        return node, tokens[1:]
     
     if token["tag"] == "null":
         return {"tag": "null"}, tokens[1:]
@@ -132,37 +135,37 @@ def test_parse_simple_expression():
         assert parse_simple_expression(t) == parse_object(t)
 
     ast, tokens = parse_simple_expression(tokenize("-1"))
-    assert ast == {"tag": "negate", "value": {"tag": "number", "value": 1}}
+    assert ast == {"tag": "negate", "value": {"tag": "number", "value": 1, "line": 1}}
 
     ast, tokens = parse_simple_expression(tokenize("--2"))
     assert ast == {
         "tag": "negate",
-        "value": {"tag": "negate", "value": {"tag": "number", "value": 2}},
+        "value": {"tag": "negate", "value": {"tag": "number", "value": 2, "line": 1}},
     }
 
     ast, tokens = parse_simple_expression(tokenize("!1"))
-    assert ast == {"tag": "not", "value": {"tag": "number", "value": 1}}
+    assert ast == {"tag": "not", "value": {"tag": "number", "value": 1, "line": 1}}
 
     ast, tokens = parse_simple_expression(tokenize("!!2"))
     assert ast == {
         "tag": "not",
-        "value": {"tag": "not", "value": {"tag": "number", "value": 2}},
+        "value": {"tag": "not", "value": {"tag": "number", "value": 2, "line": 1}},
     }
 
     ast, tokens = parse_simple_expression(tokenize("(1+2)"))
     assert ast == {
         "tag": "+",
-        "left": {"tag": "number", "value": 1},
-        "right": {"tag": "number", "value": 2},
+        "left": {"tag": "number", "value": 1, "line": 1},
+        "right": {"tag": "number", "value": 2, "line": 1,}, 
     }
     ast, tokens = parse_simple_expression(tokenize("(1+(2*3))"))
     assert ast == {
         "tag": "+",
-        "left": {"tag": "number", "value": 1},
+        "left": {"tag": "number", "value": 1, "line": 1},
         "right": {
             "tag": "*",
-            "left": {"tag": "number", "value": 2},
-            "right": {"tag": "number", "value": 3},
+            "left": {"tag": "number", "value": 2, "line": 1,},
+            "right": {"tag": "number", "value": 3, "line": 1,},
         },
     }
 
@@ -196,30 +199,30 @@ def test_parse_list():
     assert ast == {
         "tag": "list",
         "items": [
-            {"tag": "number", "value": 1},
-            {"tag": "number", "value": 2},
-            {"tag": "number", "value": 3},
+            {"tag": "number", "value": 1, "line": 1},
+            {"tag": "number", "value": 2, "line": 1},
+            {"tag": "number", "value": 3, "line": 1},
         ],
     }
     ast, tokens = parse_list(tokenize("[1,2,3,]"))
     assert ast == {
         "tag": "list",
         "items": [
-            {"tag": "number", "value": 1},
-            {"tag": "number", "value": 2},
-            {"tag": "number", "value": 3},
+            {"tag": "number", "value": 1, "line": 1},
+            {"tag": "number", "value": 2, "line": 1},
+            {"tag": "number", "value": 3, "line": 1},
         ],
     }
     ast, tokens = parse_list(tokenize("[1,2,3,[4,5]]"))
     assert ast == {
         "tag": "list",
         "items": [
-            {"tag": "number", "value": 1},
-            {"tag": "number", "value": 2},
-            {"tag": "number", "value": 3},
+            {"tag": "number", "value": 1, "line": 1},
+            {"tag": "number", "value": 2, "line": 1},
+            {"tag": "number", "value": 3, "line": 1},
             {
                 "tag": "list",
-                "items": [{"tag": "number", "value": 4}, {"tag": "number", "value": 5}],
+                "items": [{"tag": "number", "value": 4, "line": 1}, {"tag": "number", "value": 5, "line": 1}],
             },
         ],
     }
@@ -232,7 +235,8 @@ def test_parse_list():
         function double(x) { return x+x };
         y = [1,2,3,double(4)]
         """))
-    assert ast == {'tag': 'program', 'statements': [{'tag': 'assign', 'target': {'tag': 'identifier', 'value': 'double'}, 'value': {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 25}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'return', 'value': {'tag': '+', 'left': {'tag': 'identifier', 'value': 'x'}, 'right': {'tag': 'identifier', 'value': 'x'}}}]}}}, {'tag': 'assign', 'target': {'tag': 'identifier', 'value': 'y'}, 'value': {'tag': 'list', 'items': [{'tag': 'number', 'value': 1}, {'tag': 'number', 'value': 2}, {'tag': 'number', 'value': 3}, {'tag': 'call', 'function': {'tag': 'identifier', 'value': 'double'}, 'arguments': [{'tag': 'number', 'value': 4}]}]}}]}
+    
+    assert ast == {'tag': 'program', 'statements': [{'tag': 'assign', 'target': {'tag': 'identifier', 'value': 'double', 'line': 2}, 'value': {'tag': 'function', 'parameters': [{'tag': 'identifier', 'position': 25, 'value': 'x'}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'return', 'value': {'tag': '+', 'left': {'tag': 'identifier', 'value': 'x', 'line': 2}, 'right': {'tag': 'identifier', 'value': 'x', 'line': 2}}}]}}, 'line': 2}, {'tag': 'assign', 'target': {'tag': 'identifier', 'value': 'y', 'line': 3}, 'value': {'tag': 'list', 'items': [{'tag': 'number', 'value': 1, 'line': 3}, {'tag': 'number', 'value': 2, 'line': 3}, {'tag': 'number', 'value': 3, 'line': 3}, {'tag': 'call', 'function': {'tag': 'identifier', 'value': 'double', 'line': 3}, 'arguments': [{'tag': 'number', 'value': 4, 'line': 3}]}]}, 'line': 3}]}
 
 
 def parse_object(tokens):
@@ -275,12 +279,12 @@ def test_parse_object():
         "tag": "object",
         "items": [
             {
-                "key": {"tag": "string", "value": "a"},
-                "value": {"tag": "number", "value": 4},
+                "key": {"tag": "string", "value": "a", "line": 1},
+                "value": {"tag": "number", "value": 4, "line": 1},
             },
             {
-                "key": {"tag": "string", "value": "b"},
-                "value": {"tag": "string", "value": "x"},
+                "key": {"tag": "string", "value": "b", "line": 1},
+                "value": {"tag": "string", "value": "x", "line": 1},
             },
         ],
     }
@@ -289,12 +293,12 @@ def test_parse_object():
         "tag": "object",
         "items": [
             {
-                "key": {"tag": "string", "value": "a"},
-                "value": {"tag": "number", "value": 4},
+                "key": {"tag": "string", "value": "a", "line": 1},
+                "value": {"tag": "number", "value": 4, "line": 1},
             },
             {
-                "key": {"tag": "string", "value": "b"},
-                "value": {"tag": "string", "value": "x"},
+                "key": {"tag": "string", "value": "b", "line": 1},
+                "value": {"tag": "string", "value": "x", "line": 1},
             },
         ],
     }
@@ -303,28 +307,28 @@ def test_parse_object():
         "tag": "object",
         "items": [
             {
-                "key": {"tag": "string", "value": "a"},
-                "value": {"tag": "number", "value": 4},
+                "key": {"tag": "string", "value": "a", "line": 1},
+                "value": {"tag": "number", "value": 4, "line": 1},
             },
             {
-                "key": {"tag": "string", "value": "b"},
+                "key": {"tag": "string", "value": "b", "line": 1},
                 "value": {
                     "tag": "object",
                     "items": [
                         {
-                            "key": {"tag": "string", "value": "c"},
-                            "value": {"tag": "string", "value": "d"},
+                            "key": {"tag": "string", "value": "c", "line": 1},
+                            "value": {"tag": "string", "value": "d", "line": 1},
                         }
                     ],
                 },
             },
             {
-                "key": {"tag": "string", "value": "e"},
+                "key": {"tag": "string", "value": "e", "line": 1},
                 "value": {
                     "tag": "list",
                     "items": [
-                        {"tag": "number", "value": 3},
-                        {"tag": "number", "value": 4},
+                        {"tag": "number", "value": 3, "line": 1},
+                        {"tag": "number", "value": 4, "line": 1},
                     ],
                 },
             },
@@ -401,8 +405,8 @@ def test_parse_function():
                     "tag": "return",
                     "value": {
                         "tag": "+",
-                        "left": {"tag": "identifier", "value": "x"},
-                        "right": {"tag": "identifier", "value": "y"},
+                        "left": {"tag": "identifier", "value": "x", "line": 1},
+                        "right": {"tag": "identifier", "value": "y", "line": 1},
                     },
                 }
             ],
@@ -420,27 +424,29 @@ def test_parse_function():
         "statements": [
             {
                 "tag": "assign",
-                "target": {"tag": "identifier", "value": "x"},
-                "value": {"tag": "number", "value": 3},
+                "target": {"tag": "identifier", "value": "x", "line": 2},
+                "value": {"tag": "number", "value": 3, "line": 2},
+                "line": 2,
             },
             {
                 "tag": "assign",
-                "target": {"tag": "identifier", "value": "g"},
+                "target": {"tag": "identifier", "value": "g", "line": 3},
                 "value": {
                     "tag": "function",
                     "parameters": [{"tag": "identifier", "value": "q", "position": 36}],
                     "body": {
                         "tag": "statement_list",
                         "statements": [
-                            {"tag": "return", "value": {"tag": "number", "value": 2}}
+                            {"tag": "return", "value": {"tag": "number", "value": 2, "line": 4}}
                         ],
                     },
                 },
+                "line": 3,
             },
             {
                 "tag": "call",
-                "function": {"tag": "identifier", "value": "g"},
-                "arguments": [{"tag": "number", "value": 4}],
+                "function": {"tag": "identifier", "value": "g", "line": 5},
+                "arguments": [{"tag": "number", "value": 4, "line": 5}],
             },
         ],
     }
@@ -498,35 +504,35 @@ def test_parse_complex_expression():
     ast, tokens = parse_complex_expression(tokenize("x[3]"))
     assert ast == {
         "tag": "complex",
-        "base": {"tag": "identifier", "value": "x"},
-        "index": {"tag": "number", "value": 3},
+        "base": {"tag": "identifier", "value": "x", "line": 1},
+        "index": {"tag": "number", "value": 3, "line": 1},
     }
     ast, tokens = parse_complex_expression(tokenize('x["x"]'))
     assert ast == {
         "tag": "complex",
-        "base": {"tag": "identifier", "value": "x"},
-        "index": {"tag": "string", "value": "x"},
+        "base": {"tag": "identifier", "value": "x", "line": 1},
+        "index": {"tag": "string", "value": "x", "line": 1},
     }
     ast, tokens = parse_complex_expression(tokenize('x["x"][3]'))
     assert ast == {
         "tag": "complex",
         "base": {
             "tag": "complex",
-            "base": {"tag": "identifier", "value": "x"},
-            "index": {"tag": "string", "value": "x"},
+            "base": {"tag": "identifier", "value": "x", "line": 1},
+            "index": {"tag": "string", "value": "x", "line": 1},
         },
-        "index": {"tag": "number", "value": 3},
+        "index": {"tag": "number", "value": 3, "line": 1},
     }
     ast, tokens = parse_complex_expression(tokenize("x.abc"))
     assert ast == {
         "tag": "complex",
-        "base": {"tag": "identifier", "value": "x"},
+        "base": {"tag": "identifier", "value": "x", "line": 1},
         "index": {"tag": "string", "value": "abc"},
     }
     ast, tokens = parse_complex_expression(tokenize("x()"))
     assert ast == {
         "tag": "call",
-        "function": {"tag": "identifier", "value": "x"},
+        "function": {"tag": "identifier", "value": "x", "line": 1},
         "arguments": [],
     }
     assert tokens[0]["tag"] == None
@@ -534,8 +540,8 @@ def test_parse_complex_expression():
     ast, tokens = parse_complex_expression(tokenize("x(1,2)"))
     assert ast == {
         "tag": "call",
-        "function": {"tag": "identifier", "value": "x"},
-        "arguments": [{"tag": "number", "value": 1}, {"tag": "number", "value": 2}],
+        "function": {"tag": "identifier", "value": "x", "line": 1},
+        "arguments": [{"tag": "number", "value": 1, "line": 1}, {"tag": "number", "value": 2, "line": 1}],
     }
 
 
@@ -577,27 +583,27 @@ def test_parse_arithmetic_term():
     """
     print("testing parse_arithmetic_term...")
     ast, tokens = parse_arithmetic_term(tokenize("x"))
-    assert ast == {"tag": "identifier", "value": "x"}
+    assert ast == {"tag": "identifier", "value": "x", "line": 1}
 
     ast, tokens = parse_arithmetic_term(tokenize("x*y"))
     assert ast == {
         "tag": "*",
-        "left": {"tag": "identifier", "value": "x"},
-        "right": {"tag": "identifier", "value": "y"},
+        "left": {"tag": "identifier", "value": "x", "line": 1},
+        "right": {"tag": "identifier", "value": "y", "line": 1},
     }
 
     ast, tokens = parse_arithmetic_term(tokenize("x/y"))
     assert ast == {
         "tag": "/",
-        "left": {"tag": "identifier", "value": "x"},
-        "right": {"tag": "identifier", "value": "y"},
+        "left": {"tag": "identifier", "value": "x", "line": 1},
+        "right": {"tag": "identifier", "value": "y", "line": 1},
     }
 
     ast, tokens = parse_arithmetic_term(tokenize("x%y"))
     assert ast == {
         "tag": "%",
-        "left": {"tag": "identifier", "value": "x"},
-        "right": {"tag": "identifier", "value": "y"},
+        "left": {"tag": "identifier", "value": "x", "line": 1},
+        "right": {"tag": "identifier", "value": "y", "line": 1},
     }
 
     ast, tokens = parse_arithmetic_term(tokenize("x*y/z"))
@@ -605,10 +611,10 @@ def test_parse_arithmetic_term():
         "tag": "/",
         "left": {
             "tag": "*",
-            "left": {"tag": "identifier", "value": "x"},
-            "right": {"tag": "identifier", "value": "y"},
+            "left": {"tag": "identifier", "value": "x", "line": 1},
+            "right": {"tag": "identifier", "value": "y", "line": 1},
         },
-        "right": {"tag": "identifier", "value": "z"},
+        "right": {"tag": "identifier", "value": "z", "line": 1},
     }
 
 
@@ -632,39 +638,40 @@ def test_parse_arithmetic_expression():
     assert parse_arithmetic_expression(tokenize("x"))[0] == {
         "tag": "identifier",
         "value": "x",
+        "line": 1,
     }
     assert parse_arithmetic_expression(tokenize("x*y"))[0] == {
         "tag": "*",
-        "left": {"tag": "identifier", "value": "x"},
-        "right": {"tag": "identifier", "value": "y"},
+        "left": {"tag": "identifier", "value": "x", "line": 1},
+        "right": {"tag": "identifier", "value": "y", "line": 1},
     }
     assert parse_arithmetic_expression(tokenize("x+y"))[0] == {
         "tag": "+",
-        "left": {"tag": "identifier", "value": "x"},
-        "right": {"tag": "identifier", "value": "y"},
+        "left": {"tag": "identifier", "value": "x", "line": 1},
+        "right": {"tag": "identifier", "value": "y", "line": 1},
     }
     assert parse_arithmetic_expression(tokenize("x-y"))[0] == {
         "tag": "-",
-        "left": {"tag": "identifier", "value": "x"},
-        "right": {"tag": "identifier", "value": "y"},
+        "left": {"tag": "identifier", "value": "x", "line": 1},
+        "right": {"tag": "identifier", "value": "y", "line": 1},
     }
     assert parse_arithmetic_expression(tokenize("x+y-z"))[0] == {
         "tag": "-",
         "left": {
             "tag": "+",
-            "left": {"tag": "identifier", "value": "x"},
-            "right": {"tag": "identifier", "value": "y"},
+            "left": {"tag": "identifier", "value": "x", "line": 1},
+            "right": {"tag": "identifier", "value": "y", "line": 1},
         },
-        "right": {"tag": "identifier", "value": "z"},
+        "right": {"tag": "identifier", "value": "z", "line": 1},
     }
     ast = parse_arithmetic_expression(tokenize("x+y*z"))[0]
     assert ast == {
         "tag": "+",
-        "left": {"tag": "identifier", "value": "x"},
+        "left": {"tag": "identifier", "value": "x", "line": 1},
         "right": {
             "tag": "*",
-            "left": {"tag": "identifier", "value": "y"},
-            "right": {"tag": "identifier", "value": "z"},
+            "left": {"tag": "identifier", "value": "y", "line": 1},
+            "right": {"tag": "identifier", "value": "z", "line": 1},
         },
     }
     ast = parse_arithmetic_expression(tokenize("(x+y)*z"))[0]
@@ -672,10 +679,10 @@ def test_parse_arithmetic_expression():
         "tag": "*",
         "left": {
             "tag": "+",
-            "left": {"tag": "identifier", "value": "x"},
-            "right": {"tag": "identifier", "value": "y"},
+            "left": {"tag": "identifier", "value": "x", "line": 1},
+            "right": {"tag": "identifier", "value": "y", "line": 1},
         },
-        "right": {"tag": "identifier", "value": "z"},
+        "right": {"tag": "identifier", "value": "z", "line": 1},
     }
 
 
@@ -702,21 +709,22 @@ def test_parse_relational_expression():
     assert parse_relational_expression(tokenize("x"))[0] == {
         "tag": "identifier",
         "value": "x",
+        "line": 1,
     }
     for tag in ["<", ">", "<=", ">=", "==", "!="]:
         assert parse_relational_expression(tokenize(f"x{tag}y"))[0] == {
             "tag": tag,
-            "left": {"tag": "identifier", "value": "x"},
-            "right": {"tag": "identifier", "value": "y"},
+            "left": {"tag": "identifier", "value": "x", "line": 1},
+            "right": {"tag": "identifier", "value": "y", "line": 1},
         }
     assert parse_relational_expression(tokenize("x<y>z"))[0] == {
         "tag": ">",
         "left": {
             "tag": "<",
-            "left": {"tag": "identifier", "value": "x"},
-            "right": {"tag": "identifier", "value": "y"},
+            "left": {"tag": "identifier", "value": "x", "line": 1},
+            "right": {"tag": "identifier", "value": "y", "line": 1},
         },
-        "right": {"tag": "identifier", "value": "z"},
+        "right": {"tag": "identifier", "value": "z", "line": 1},
     }
 
 
@@ -735,10 +743,10 @@ def test_parse_logical_factor():
     logical_factor = relational_expression
     """
     print("testing parse_logical_factor...")
-    assert parse_logical_factor(tokenize("x"))[0] == {"tag": "identifier", "value": "x"}
+    assert parse_logical_factor(tokenize("x"))[0] == {"tag": "identifier", "value": "x", "line": 1}
     assert parse_logical_factor(tokenize("!x"))[0] == {
         "tag": "not",
-        "value": {"tag": "identifier", "value": "x"},
+        "value": {"tag": "identifier", "value": "x", "line": 1},
     }
 
 
@@ -759,20 +767,20 @@ def test_parse_logical_term():
     logical_term = logical_factor { "&&" logical_factor }
     """
     print("testing parse_logical_term...")
-    assert parse_logical_term(tokenize("x"))[0] == {"tag": "identifier", "value": "x"}
+    assert parse_logical_term(tokenize("x"))[0] == {"tag": "identifier", "value": "x", "line": 1}
     assert parse_logical_term(tokenize("x&&y"))[0] == {
         "tag": "&&",
-        "left": {"tag": "identifier", "value": "x"},
-        "right": {"tag": "identifier", "value": "y"},
+        "left": {"tag": "identifier", "value": "x", "line": 1},
+        "right": {"tag": "identifier", "value": "y", "line": 1},
     }
     assert parse_logical_term(tokenize("x&&y&&z"))[0] == {
         "tag": "&&",
         "left": {
             "tag": "&&",
-            "left": {"tag": "identifier", "value": "x"},
-            "right": {"tag": "identifier", "value": "y"},
+            "left": {"tag": "identifier", "value": "x", "line": 1},
+            "right": {"tag": "identifier", "value": "y", "line": 1},
         },
-        "right": {"tag": "identifier", "value": "z"},
+        "right": {"tag": "identifier", "value": "z", "line": 1},
     }
 
 
@@ -797,19 +805,20 @@ def test_parse_logical_expression():
     assert parse_logical_expression(tokenize("x"))[0] == {
         "tag": "identifier",
         "value": "x",
+        "line": 1,
     }
     assert parse_logical_expression(tokenize("x||y"))[0] == {
         "tag": "||",
-        "left": {"tag": "identifier", "value": "x"},
-        "right": {"tag": "identifier", "value": "y"},
+        "left": {"tag": "identifier", "value": "x", "line": 1},
+        "right": {"tag": "identifier", "value": "y", "line": 1},
     }
     assert parse_logical_expression(tokenize("x||y&&z"))[0] == {
         "tag": "||",
-        "left": {"tag": "identifier", "value": "x"},
+        "left": {"tag": "identifier", "value": "x", "line": 1},
         "right": {
             "tag": "&&",
-            "left": {"tag": "identifier", "value": "y"},
-            "right": {"tag": "identifier", "value": "z"},
+            "left": {"tag": "identifier", "value": "y", "line": 1},
+            "right": {"tag": "identifier", "value": "z", "line": 1},
         },
     }
 
@@ -834,7 +843,14 @@ def parse_assignment_expression(tokens):
                 raise SyntaxError("extern can only be used with simple identifiers")
             left["extern"] = True
 
-        return {"tag": "assign", "target": left, "value": right}, tokens
+        assign_node = {"tag": "assign", "target": left, "value": right}
+        
+        # Capture line number from the target for watch tracking
+        line = left.get("line") if "line" in left else tokens[0].get("line") if tokens else None
+        if line:
+            assign_node["line"] = line
+        
+        return assign_node, tokens
 
     # if no assignment occurred, extern must not be present
     assert not extern, "Can't use extern without assignment."
@@ -849,50 +865,55 @@ def test_parse_assignment_expression():
 
     # Simple value
     ast, tokens = parse_assignment_expression(tokenize("x"))
-    assert ast == {"tag": "identifier", "value": "x"}
+    assert ast == {"tag": "identifier", "value": "x", "line": 1}
 
     # Basic assignment
     ast, tokens = parse_assignment_expression(tokenize("x = 3"))
     assert ast == {
         "tag": "assign",
-        "target": {"tag": "identifier", "value": "x"},
-        "value": {"tag": "number", "value": 3},
+        "target": {"tag": "identifier", "value": "x", "line": 1},
+        "value": {"tag": "number", "value": 3, "line": 1},
+        "line": 1,
     }
 
     # Nested assignment
     ast, tokens = parse_assignment_expression(tokenize("x = y = 4"))
     assert ast == {
         "tag": "assign",
-        "target": {"tag": "identifier", "value": "x"},
+        "target": {"tag": "identifier", "value": "x", "line": 1},
         "value": {
             "tag": "assign",
-            "target": {"tag": "identifier", "value": "y"},
-            "value": {"tag": "number", "value": 4},
+            "target": {"tag": "identifier", "value": "y", "line": 1},
+            "value": {"tag": "number", "value": 4, "line": 1},
+            "line": 1,
         },
+        "line": 1,
     }
 
     # Assignment with expression on RHS
     ast, tokens = parse_assignment_expression(tokenize("x = y + 1"))
     assert ast == {
         "tag": "assign",
-        "target": {"tag": "identifier", "value": "x"},
+        "target": {"tag": "identifier", "value": "x", "line": 1},
         "value": {
             "tag": "+",
-            "left": {"tag": "identifier", "value": "y"},
-            "right": {"tag": "number", "value": 1},
+            "left": {"tag": "identifier", "value": "y", "line": 1},
+            "right": {"tag": "number", "value": 1, "line": 1},
         },
+        "line": 1,
     }
 
     # extern assignment (valid)
     ast, tokens = parse_assignment_expression(tokenize("extern x = y + 1"))
     assert ast == {
         "tag": "assign",
-        "target": {"tag": "identifier", "value": "x", "extern": True},
+        "target": {"tag": "identifier", "value": "x", "line": 1, "extern": True},
         "value": {
             "tag": "+",
-            "left": {"tag": "identifier", "value": "y"},
-            "right": {"tag": "number", "value": 1},
+            "left": {"tag": "identifier", "value": "y", "line": 1},
+            "right": {"tag": "number", "value": 1, "line": 1},
         },
+        "line": 1,
     }
 
     # extern without assignment (invalid)
@@ -970,26 +991,26 @@ def test_parse_statement_list():
     assert ast == {
         "tag": "statement_list",
         "statements": [
-            {"tag": "print", "value": {"tag": "number", "value": 2}},
-            {"tag": "print", "value": {"tag": "number", "value": 3}},
+            {"tag": "print", "value": {"tag": "number", "value": 2, "line": 1}},
+            {"tag": "print", "value": {"tag": "number", "value": 3, "line": 1}},
         ],
     }
     ast, tokens = parse_statement_list(tokenize("{print 2;print 3;}"))
     assert ast == {
         "tag": "statement_list",
         "statements": [
-            {"tag": "print", "value": {"tag": "number", "value": 2}},
-            {"tag": "print", "value": {"tag": "number", "value": 3}},
+            {"tag": "print", "value": {"tag": "number", "value": 2, "line": 1}},
+            {"tag": "print", "value": {"tag": "number", "value": 3, "line": 1}},
         ],
     }
     ast, tokens = parse_statement_list(tokenize("{print 2;if (x) {4} print 3;}"))
-    assert ast == {'tag': 'statement_list', 'statements': [{'tag': 'print', 'value': {'tag': 'number', 'value': 2}}, {'tag': 'if', 'condition': {'tag': 'identifier', 'value': 'x'}, 'then': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 4}]}}, {'tag': 'print', 'value': {'tag': 'number', 'value': 3}}]}
+    assert ast == {'tag': 'statement_list', 'statements': [{'tag': 'print', 'value': {'tag': 'number', 'value': 2, 'line': 1}}, {'tag': 'if', 'condition': {'tag': 'identifier', 'value': 'x', 'line': 1}, 'then': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 4, 'line': 1}]}}, {'tag': 'print', 'value': {'tag': 'number', 'value': 3, 'line': 1}}]}
     ast, tokens = parse_statement_list(tokenize("{print 2;if (x) {4} print 3}"))
-    assert ast == {'tag': 'statement_list', 'statements': [{'tag': 'print', 'value': {'tag': 'number', 'value': 2}}, {'tag': 'if', 'condition': {'tag': 'identifier', 'value': 'x'}, 'then': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 4}]}}, {'tag': 'print', 'value': {'tag': 'number', 'value': 3}}]}
+    assert ast == {'tag': 'statement_list', 'statements': [{'tag': 'print', 'value': {'tag': 'number', 'value': 2, 'line': 1}}, {'tag': 'if', 'condition': {'tag': 'identifier', 'value': 'x', 'line': 1}, 'then': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 4, 'line': 1}]}}, {'tag': 'print', 'value': {'tag': 'number', 'value': 3, 'line': 1}}]}
     ast, tokens = parse_statement_list(tokenize("{print 2;function z(x) {4} print 3;}"))
-    assert ast == {'tag': 'statement_list', 'statements': [{'tag': 'print', 'value': {'tag': 'number', 'value': 2}}, {'tag': 'assign', 'target': {'tag': 'identifier', 'value': 'z'}, 'value': {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 20}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 4}]}}}, {'tag': 'print', 'value': {'tag': 'number', 'value': 3}}]}
+    assert ast == {'tag': 'statement_list', 'statements': [{'tag': 'print', 'value': {'tag': 'number', 'value': 2, 'line': 1}}, {'tag': 'assign', 'target': {'tag': 'identifier', 'value': 'z', 'line': 1}, 'value': {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 20}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 4, 'line': 1}]}}, 'line': 1}, {'tag': 'print', 'value': {'tag': 'number', 'value': 3, 'line': 1}}]}
     ast, tokens = parse_statement_list(tokenize("{print 2;z = function (x) {4} print 3;}"))
-    assert ast == {'tag': 'statement_list', 'statements': [{'tag': 'print', 'value': {'tag': 'number', 'value': 2}}, {'tag': 'assign', 'target': {'tag': 'identifier', 'value': 'z'}, 'value': {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 23}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 4}]}}}, {'tag': 'print', 'value': {'tag': 'number', 'value': 3}}]}
+    assert ast == {'tag': 'statement_list', 'statements': [{'tag': 'print', 'value': {'tag': 'number', 'value': 2, 'line': 1}}, {'tag': 'assign', 'target': {'tag': 'identifier', 'value': 'z', 'line': 1}, 'value': {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 23}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 4, 'line': 1}]}}, 'line': 1}, {'tag': 'print', 'value': {'tag': 'number', 'value': 3, 'line': 1}}]}
 
 def parse_switch_statement(tokens):
     """
@@ -1049,13 +1070,13 @@ def test_parse_switch_statement():
     ast, tokens = parse_switch_statement(tokenize("switch (x) { case 1: { print 1 } }"))
     assert ast == {
         "tag": "switch",
-        "condition": {"tag": "identifier", "value": "x"},
+        "condition": {"tag": "identifier", "value": "x", "line": 1},
         "cases": [{
             "tag": "case",
-            "values": [{"tag": "number", "value": 1}],
+            "values": [{"tag": "number", "value": 1, "line": 1}],
             "body": {
                 "tag": "statement_list",
-                "statements": [{"tag": "print", "value": {"tag": "number", "value": 1}}]
+                "statements": [{"tag": "print", "value": {"tag": "number", "value": 1, "line": 1}}]
             }
         }]
     }
@@ -1070,30 +1091,30 @@ def test_parse_switch_statement():
     """))
     assert ast == {
         "tag": "switch",
-        "condition": {"tag": "identifier", "value": "x"},
+        "condition": {"tag": "identifier", "value": "x", "line": 2},
         "cases": [
             {
                 "tag": "case",
-                "values": [{"tag": "number", "value": 1}],
+                "values": [{"tag": "number", "value": 1, "line": 3}],
                 "body": {
                     "tag": "statement_list",
-                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "one"}}]
+                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "one", "line": 3}}]
                 }
             },
             {
                 "tag": "case",
-                "values": [{"tag": "number", "value": 2}],
+                "values": [{"tag": "number", "value": 2, "line": 4}],
                 "body": {
                     "tag": "statement_list",
-                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "two"}}]
+                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "two", "line": 4}}]
                 }
             },
             {
                 "tag": "case",
-                "values": [{"tag": "number", "value": 3}],
+                "values": [{"tag": "number", "value": 3, "line": 5}],
                 "body": {
                     "tag": "statement_list",
-                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "three"}}]
+                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "three", "line": 5}}]
                 }
             }
         ]
@@ -1108,20 +1129,20 @@ def test_parse_switch_statement():
     """))
     assert ast == {
         "tag": "switch",
-        "condition": {"tag": "identifier", "value": "x"},
+        "condition": {"tag": "identifier", "value": "x", "line": 2},
         "cases": [{
             "tag": "case",
-            "values": [{"tag": "number", "value": 1}],
+            "values": [{"tag": "number", "value": 1, "line": 3}],
             "body": {
                 "tag": "statement_list",
-                "statements": [{"tag": "print", "value": {"tag": "string", "value": "one"}}]
+                "statements": [{"tag": "print", "value": {"tag": "string", "value": "one", "line": 3}}]
             }
         }],
         "default": {
             "tag": "default",
             "body": {
                 "tag": "statement_list",
-                "statements": [{"tag": "print", "value": {"tag": "string", "value": "other"}}]
+                "statements": [{"tag": "print", "value": {"tag": "string", "value": "other", "line": 4}}]
             }
         }
     }
@@ -1135,31 +1156,31 @@ def test_parse_switch_statement():
     """))
     assert ast == {
         "tag": "switch",
-        "condition": {"tag": "identifier", "value": "day"},
+        "condition": {"tag": "identifier", "value": "day", "line": 2},
         "cases": [
             {
                 "tag": "case",
                 "values": [
-                    {"tag": "number", "value": 1},
-                    {"tag": "number", "value": 7}
+                    {"tag": "number", "value": 1, "line": 3},
+                    {"tag": "number", "value": 7, "line": 3}
                 ],
                 "body": {
                     "tag": "statement_list",
-                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "weekend"}}]
+                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "weekend", "line": 3}}]
                 }
             },
             {
                 "tag": "case",
                 "values": [
-                    {"tag": "number", "value": 2},
-                    {"tag": "number", "value": 3},
-                    {"tag": "number", "value": 4},
-                    {"tag": "number", "value": 5},
-                    {"tag": "number", "value": 6}
+                    {"tag": "number", "value": 2, "line": 4},
+                    {"tag": "number", "value": 3, "line": 4},
+                    {"tag": "number", "value": 4, "line": 4},
+                    {"tag": "number", "value": 5, "line": 4},
+                    {"tag": "number", "value": 6, "line": 4}
                 ],
                 "body": {
                     "tag": "statement_list",
-                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "weekday"}}]
+                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "weekday", "line": 4}}]
                 }
             }
         ]
@@ -1169,7 +1190,7 @@ def test_parse_switch_statement():
     ast, tokens = parse_switch_statement(tokenize("switch (x) {}"))
     assert ast == {
         "tag": "switch",
-        "condition": {"tag": "identifier", "value": "x"},
+        "condition": {"tag": "identifier", "value": "x", "line": 1},
         "cases": []
     }
     
@@ -1177,13 +1198,13 @@ def test_parse_switch_statement():
     ast, tokens = parse_switch_statement(tokenize("switch (x) { default: { print 1 } }"))
     assert ast == {
         "tag": "switch",
-        "condition": {"tag": "identifier", "value": "x"},
+        "condition": {"tag": "identifier", "value": "x", "line": 1},
         "cases": [],
         "default": {
             "tag": "default",
             "body": {
                 "tag": "statement_list",
-                "statements": [{"tag": "print", "value": {"tag": "number", "value": 1}}]
+                "statements": [{"tag": "print", "value": {"tag": "number", "value": 1, "line": 1}}]
             }
         }
     }
@@ -1194,15 +1215,15 @@ def test_parse_switch_statement():
         "tag": "switch",
         "condition": {
             "tag": "+",
-            "left": {"tag": "identifier", "value": "x"},
-            "right": {"tag": "number", "value": 1}
+            "left": {"tag": "identifier", "value": "x", "line": 1},
+            "right": {"tag": "number", "value": 1, "line": 1}
         },
         "cases": [{
             "tag": "case",
-            "values": [{"tag": "number", "value": 1}],
+            "values": [{"tag": "number", "value": 1, "line": 1}],
             "body": {
                 "tag": "statement_list",
-                "statements": [{"tag": "print", "value": {"tag": "number", "value": 1}}]
+                "statements": [{"tag": "print", "value": {"tag": "number", "value": 1, "line": 1}}]
             }
         }]
     }
@@ -1258,10 +1279,10 @@ def test_parse_case_statement():
     ast, tokens = parse_case_statement(tokenize("case 1: { print 1 }"))
     assert ast == {
         "tag": "case",
-        "values": [{"tag": "number", "value": 1}],
+        "values": [{"tag": "number", "value": 1, "line": 1}],
         "body": {
             "tag": "statement_list",
-            "statements": [{"tag": "print", "value": {"tag": "number", "value": 1}}]
+            "statements": [{"tag": "print", "value": {"tag": "number", "value": 1, "line": 1}}]
         }
     }
     
@@ -1270,13 +1291,13 @@ def test_parse_case_statement():
     assert ast == {
         "tag": "case",
         "values": [
-            {"tag": "number", "value": 1},
-            {"tag": "number", "value": 2},
-            {"tag": "number", "value": 3}
+            {"tag": "number", "value": 1, "line": 1},
+            {"tag": "number", "value": 2, "line": 1},
+            {"tag": "number", "value": 3, "line": 1}
         ],
         "body": {
             "tag": "statement_list",
-            "statements": [{"tag": "print", "value": {"tag": "string", "value": "multiple"}}]
+            "statements": [{"tag": "print", "value": {"tag": "string", "value": "multiple", "line": 1}}]
         }
     }
     
@@ -1284,10 +1305,10 @@ def test_parse_case_statement():
     ast, tokens = parse_case_statement(tokenize('case "hello": { print "world" }'))
     assert ast == {
         "tag": "case",
-        "values": [{"tag": "string", "value": "hello"}],
+        "values": [{"tag": "string", "value": "hello", "line": 1}],
         "body": {
             "tag": "statement_list",
-            "statements": [{"tag": "print", "value": {"tag": "string", "value": "world"}}]
+            "statements": [{"tag": "print", "value": {"tag": "string", "value": "world", "line": 1}}]
         }
     }
     
@@ -1297,12 +1318,12 @@ def test_parse_case_statement():
         "tag": "case",
         "values": [{
             "tag": "+",
-            "left": {"tag": "identifier", "value": "x"},
-            "right": {"tag": "number", "value": 1}
+            "left": {"tag": "identifier", "value": "x", "line": 1},
+            "right": {"tag": "number", "value": 1, "line": 1}
         }],
         "body": {
             "tag": "statement_list",
-            "statements": [{"tag": "print", "value": {"tag": "identifier", "value": "x"}}]
+            "statements": [{"tag": "print", "value": {"tag": "identifier", "value": "x", "line": 1}}]
         }
     }
     
@@ -1310,7 +1331,7 @@ def test_parse_case_statement():
     ast, tokens = parse_case_statement(tokenize("case 1: {}"))
     assert ast == {
         "tag": "case",
-        "values": [{"tag": "number", "value": 1}],
+        "values": [{"tag": "number", "value": 1, "line": 1}],
         "body": {"tag": "statement_list", "statements": []}
     }
     
@@ -1318,16 +1339,17 @@ def test_parse_case_statement():
     ast, tokens = parse_case_statement(tokenize("case 1: { x = 5; print x; break }"))
     assert ast == {
         "tag": "case",
-        "values": [{"tag": "number", "value": 1}],
+        "values": [{"tag": "number", "value": 1, "line": 1}],
         "body": {
             "tag": "statement_list",
             "statements": [
                 {
                     "tag": "assign",
-                    "target": {"tag": "identifier", "value": "x"},
-                    "value": {"tag": "number", "value": 5}
+                    "target": {"tag": "identifier", "value": "x", "line": 1},
+                    "value": {"tag": "number", "value": 5, "line": 1},
+                    "line": 1
                 },
-                {"tag": "print", "value": {"tag": "identifier", "value": "x"}},
+                {"tag": "print", "value": {"tag": "identifier", "value": "x", "line": 1}},
                 {"tag": "break"}
             ]
         }
@@ -1360,7 +1382,7 @@ def test_parse_default_statement():
         "tag": "default",
         "body": {
             "tag": "statement_list",
-            "statements": [{"tag": "print", "value": {"tag": "string", "value": "default"}}]
+            "statements": [{"tag": "print", "value": {"tag": "string", "value": "default", "line": 1}}]
         }
     }
     
@@ -1378,9 +1400,9 @@ def test_parse_default_statement():
         "body": {
             "tag": "statement_list",
             "statements": [
-                {"tag": "print", "value": {"tag": "number", "value": 1}},
-                {"tag": "print", "value": {"tag": "number", "value": 2}},
-                {"tag": "print", "value": {"tag": "number", "value": 3}}
+                {"tag": "print", "value": {"tag": "number", "value": 1, "line": 1}},
+                {"tag": "print", "value": {"tag": "number", "value": 2, "line": 1}},
+                {"tag": "print", "value": {"tag": "number", "value": 3, "line": 1}}
             ]
         }
     }
@@ -1424,29 +1446,29 @@ def test_parse_if_statement():
     ast = parse_if_statement(tokenize("if(1){}"))[0]
     assert ast == {
         "tag": "if",
-        "condition": {"tag": "number", "value": 1},
+        "condition": {"tag": "number", "value": 1, "line": 1},
         "then": {"tag": "statement_list", "statements": []},
     }
     ast = parse_if_statement(tokenize("if(1){print 1}"))[0]
     assert ast == {
         "tag": "if",
-        "condition": {"tag": "number", "value": 1},
+        "condition": {"tag": "number", "value": 1, "line": 1},
         "then": {
             "tag": "statement_list",
-            "statements": [{"tag": "print", "value": {"tag": "number", "value": 1}}],
+            "statements": [{"tag": "print", "value": {"tag": "number", "value": 1, "line": 1}}],
         },
     }
     ast = parse_if_statement(tokenize("if(1){print 1}else{print 2}"))[0]
     assert ast == {
         "tag": "if",
-        "condition": {"tag": "number", "value": 1},
+        "condition": {"tag": "number", "value": 1, "line": 1},
         "then": {
             "tag": "statement_list",
-            "statements": [{"tag": "print", "value": {"tag": "number", "value": 1}}],
+            "statements": [{"tag": "print", "value": {"tag": "number", "value": 1, "line": 1}}],
         },
         "else": {
             "tag": "statement_list",
-            "statements": [{"tag": "print", "value": {"tag": "number", "value": 2}}],
+            "statements": [{"tag": "print", "value": {"tag": "number", "value": 2, "line": 1}}],
         },
     }
 
@@ -1474,10 +1496,10 @@ def test_parse_while_statement():
     ast = parse_while_statement(tokenize("while(1){print 1}"))[0]
     assert ast == {
         "tag": "while",
-        "condition": {"tag": "number", "value": 1},
+        "condition": {"tag": "number", "value": 1, "line": 1},
         "do": {
             "tag": "statement_list",
-            "statements": [{"tag": "print", "value": {"tag": "number", "value": 1}}],
+            "statements": [{"tag": "print", "value": {"tag": "number", "value": 1, "line": 1}}],
         },
     }
 
@@ -1508,9 +1530,9 @@ def test_parse_return_statement():
     ast = parse_return_statement(tokenize("return;34"))[0]
     assert ast == {"tag": "return"}
     ast = parse_return_statement(tokenize("return 5"))[0]
-    assert ast == {"tag": "return", "value": {"tag": "number", "value": 5}}
+    assert ast == {"tag": "return", "value": {"tag": "number", "value": 5, "line": 1}}
     ast = parse_return_statement(tokenize("return (5)"))[0]
-    assert ast == {"tag": "return", "value": {"tag": "number", "value": 5}}
+    assert ast == {"tag": "return", "value": {"tag": "number", "value": 5, "line": 1}}
 
 
 def parse_print_statement(tokens):
@@ -1533,7 +1555,7 @@ def test_parse_print_statement():
     """
     print("testing parse_print_statement...")
     ast = parse_print_statement(tokenize("print 1"))[0]
-    assert ast == {"tag": "print", "value": {"tag": "number", "value": 1}}
+    assert ast == {"tag": "print", "value": {"tag": "number", "value": 1, "line": 1}}
 
 def parse_exit_statement(tokens):
     """
@@ -1555,7 +1577,7 @@ def test_parse_exit_statement():
     """
     print("testing parse_exit_statement...")
     ast = parse_exit_statement(tokenize("exit 1"))[0]
-    assert ast == {"tag": "exit", "value": {"tag": "number", "value": 1}}
+    assert ast == {"tag": "exit", "value": {"tag": "number", "value": 1, "line": 1}}
 
 def parse_import_statement(tokens):
     """
@@ -1573,7 +1595,7 @@ def test_parse_import_statement():
     """
     print("testing parse_import_statement...")
     ast = parse_import_statement(tokenize("import \"abc.t\""))[0]
-    assert ast == {'tag': 'import', 'value': {'tag': 'string', 'value': 'abc.t'}}
+    assert ast == {'tag': 'import', 'value': {'tag': 'string', 'value': 'abc.t', 'line': 1}}
 
 def parse_break_statement(tokens):
     """
@@ -1647,9 +1669,9 @@ def test_parse_assert_statement():
     """
     print("testing parse_assert_statement...")
     ast = parse_assert_statement(tokenize("assert 1"))[0]
-    assert ast == {"tag": "assert", "condition": {"tag": "number", "value": 1}}
+    assert ast == {"tag": "assert", "condition": {"tag": "number", "value": 1, "line": 1}}
     ast = parse_assert_statement(tokenize("assert 1,2"))[0]
-    assert ast == {"tag": "assert", "condition": {"tag": "number", "value": 1},"explanation": {"tag": "number", "value": 2}}
+    assert ast == {"tag": "assert", "condition": {"tag": "number", "value": 1, "line": 1},"explanation": {"tag": "number", "value": 2, "line": 1}}
 
 
 def test_parse_function_statement():
@@ -1660,15 +1682,16 @@ def test_parse_function_statement():
     ast, result = parse_function_statement(tokenize("function x(y){2}"))
     assert ast == {
         "tag": "assign",
-        "target": {"tag": "identifier", "value": "x"},
+        "target": {"tag": "identifier", "value": "x", "line": 1},
         "value": {
+            "tag": "function",
+            "parameters": [{"tag": "identifier", "position": 11, "value": "y"}],
             "body": {
                 "tag": "statement_list",
-                "statements": [{"tag": "number", "value": 2}],
+                "statements": [{"tag": "number", "value": 2, "line": 1}],
             },
-            "parameters": [{"position": 11, "tag": "identifier", "value": "y"}],
-            "tag": "function",
         },
+        "line": 1,
     }
 
 
@@ -1764,21 +1787,21 @@ def test_parse_program():
     assert ast == {
         "tag": "program",
         "statements": [
-            {"tag": "print", "value": {"tag": "number", "value": 1}},
-            {"tag": "print", "value": {"tag": "number", "value": 2}},
+            {"tag": "print", "value": {"tag": "number", "value": 1, "line": 1}},
+            {"tag": "print", "value": {"tag": "number", "value": 2, "line": 1}},
         ],
     }
     ast, tokens = parse_program(tokenize("print 1; print 2;"))
     assert ast == {
         "tag": "program",
         "statements": [
-            {"tag": "print", "value": {"tag": "number", "value": 1}},
-            {"tag": "print", "value": {"tag": "number", "value": 2}},
+            {"tag": "print", "value": {"tag": "number", "value": 1, "line": 1}},
+            {"tag": "print", "value": {"tag": "number", "value": 2, "line": 1}},
         ],
     }
     code = """if (1) {print 3} print 4; print 5"""
     ast, tokens = parse_program(tokenize(code))
-    assert ast=={'tag': 'program', 'statements': [{'tag': 'if', 'condition': {'tag': 'number', 'value': 1}, 'then': {'tag': 'statement_list', 'statements': [{'tag': 'print', 'value': {'tag': 'number', 'value': 3}}]}}, {'tag': 'print', 'value': {'tag': 'number', 'value': 4}}, {'tag': 'print', 'value': {'tag': 'number', 'value': 5}}]}
+    assert ast=={'tag': 'program', 'statements': [{'tag': 'if', 'condition': {'tag': 'number', 'value': 1, 'line': 1}, 'then': {'tag': 'statement_list', 'statements': [{'tag': 'print', 'value': {'tag': 'number', 'value': 3, 'line': 1}}]}}, {'tag': 'print', 'value': {'tag': 'number', 'value': 4, 'line': 1}}, {'tag': 'print', 'value': {'tag': 'number', 'value': 5, 'line': 1}}]}
 
 
 def parse(tokens):
@@ -1794,17 +1817,17 @@ def test_parse():
         "tag": "program",
         "statements": [
             {
-                "left": {
-                    "left": {"tag": "number", "value": 2},
-                    "right": {
-                        "left": {"tag": "number", "value": 3},
-                        "right": {"tag": "number", "value": 4},
-                        "tag": "*",
-                    },
-                    "tag": "+",
-                },
-                "right": {"tag": "number", "value": 5},
                 "tag": "+",
+                "left": {
+                    "tag": "+",
+                    "left": {"tag": "number", "value": 2, "line": 1},
+                    "right": {
+                        "tag": "*",
+                        "left": {"tag": "number", "value": 3, "line": 1},
+                        "right": {"tag": "number", "value": 4, "line": 1},
+                    },
+                },
+                "right": {"tag": "number", "value": 5, "line": 1},
             }
         ],
     }
@@ -1819,23 +1842,23 @@ def test_parse():
                     "tag": "<",
                     "left": {
                         "tag": "*",
-                        "left": {"tag": "number", "value": 1},
-                        "right": {"tag": "number", "value": 2},
+                        "left": {"tag": "number", "value": 1, "line": 1},
+                        "right": {"tag": "number", "value": 2, "line": 1},
                     },
                     "right": {
                         "tag": "*",
-                        "left": {"tag": "number", "value": 3},
-                        "right": {"tag": "number", "value": 4},
+                        "left": {"tag": "number", "value": 3, "line": 1},
+                        "right": {"tag": "number", "value": 4, "line": 1},
                     },
                 },
                 "right": {
                     "tag": "&&",
                     "left": {
                         "tag": ">",
-                        "left": {"tag": "number", "value": 5},
-                        "right": {"tag": "number", "value": 6},
+                        "left": {"tag": "number", "value": 5, "line": 1},
+                        "right": {"tag": "number", "value": 6, "line": 1},
                     },
-                    "right": {"tag": "number", "value": 7},
+                    "right": {"tag": "number", "value": 7, "line": 1},
                 },
             }
         ],
@@ -1846,8 +1869,7 @@ def test_parse():
                          }
                       """)
     ast = parse(tokens)
-
-
+    
 if __name__ == "__main__":
     # List of all test functions
     test_functions = [
