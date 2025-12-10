@@ -583,3 +583,23 @@ switch(x) {
     case 7:  {print "inputting 5 should not run case 7"}
     default: {print "everything is broken!"}
 };
+
+counter = 0;
+counter = counter + 1;
+x = 1;
+while (x < 4) {
+    counter = counter + 10;
+    x = x + 1
+};
+
+if (counter > 20) {
+    counter = 999
+};
+
+function increment() {
+    extern counter = counter + 1000
+};
+increment();
+
+print "Final counter value:";
+print counter;
