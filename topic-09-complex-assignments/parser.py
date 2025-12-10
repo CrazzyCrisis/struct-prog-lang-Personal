@@ -35,16 +35,20 @@ grammar = """
     print_statement = "print" [ expression ]
     function_statement = "function" identifier "(" [ identifier { "," identifier } ] ")" statements
 
-    if_statement = "if" "(" expression ")" statement_list [ "else" (if_statement | statement_list) ]
-    while_statement = "while" "(" expression ")" statement_list
+    statement = if_statement | switch_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
     statement_list = "{" statement { ";" statement } "}"
+
+    if_statement = "if" "(" expression ")" statement_list [ "else" (if_statement | statement_list) ]
+    switch_statement = "switch" "(" expression ")" "{" { case_statement } [ default_statement ] "}"
+    case_statement = "case" expression { "," expression } ":" statement_list
+    default_statement = "default" ":" statement_list
+    while_statement = "while" "(" expression ")" statement_list
     exit_statement = "exit" [ expression ]
     assert_statement = "assert" expression [ "," expression ]
     import_statement = "import" expression
     break_statement = "break"
     continue_statement = "continue"
 
-    statement = if_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
 
     program = [ statement { ";" statement } {";"} ]
     """
@@ -987,6 +991,399 @@ def test_parse_statement_list():
     ast, tokens = parse_statement_list(tokenize("{print 2;z = function (x) {4} print 3;}"))
     assert ast == {'tag': 'statement_list', 'statements': [{'tag': 'print', 'value': {'tag': 'number', 'value': 2}}, {'tag': 'assign', 'target': {'tag': 'identifier', 'value': 'z'}, 'value': {'tag': 'function', 'parameters': [{'tag': 'identifier', 'value': 'x', 'position': 23}], 'body': {'tag': 'statement_list', 'statements': [{'tag': 'number', 'value': 4}]}}}, {'tag': 'print', 'value': {'tag': 'number', 'value': 3}}]}
 
+def parse_switch_statement(tokens):
+    """
+    switch_statement = "switch" "(" expression ")" "{" { case_statement } [ default_statement ] "}"
+    case_statement = "case" expression { "," expression } ":" statement_list
+    default_statement = "default" ":" statement_list
+    """
+    assert tokens[0]["tag"] == "switch", f"Expected 'switch' at position {tokens[0]['position']}"
+    tokens = tokens[1:]
+    
+    # Parse condition
+    assert tokens[0]["tag"] == "(", f"Expected '(' at position {tokens[0]['position']}"
+    condition, tokens = parse_expression(tokens[1:])
+    assert tokens[0]["tag"] == ")", f"Expected ')' at position {tokens[0]['position']}"
+    tokens = tokens[1:]
+    
+    # Parse body
+    assert tokens[0]["tag"] == "{", f"Expected '{{' at position {tokens[0]['position']}"
+    tokens = tokens[1:]
+    
+    cases = []
+    default = None
+    
+    # Parse all case statements
+    while tokens[0]["tag"] == "case":
+        case_node, tokens = parse_case_statement(tokens)
+        cases.append(case_node)
+    
+    # Parse optional default statement
+    if tokens[0]["tag"] == "default":
+        default, tokens = parse_default_statement(tokens)
+    
+    assert tokens[0]["tag"] == "}", f"Expected '}}' at position {tokens[0]['position']}"
+    tokens = tokens[1:]
+    
+    node = {
+        "tag": "switch",
+        "condition": condition,
+        "cases": cases
+    }
+    
+    if default:
+        node["default"] = default
+    
+    return node, tokens
+
+
+def test_parse_switch_statement():
+    """
+    switch_statement = "switch" "(" expression ")" "{" { case_statement } [ default_statement ] "}"
+    case_statement = "case" expression { "," expression } ":" statement_list
+    default_statement = "default" ":" statement_list
+    """
+    print("testing parse_switch_statement...")
+    
+    # Basic switch with one case
+    ast, tokens = parse_switch_statement(tokenize("switch (x) { case 1: { print 1 } }"))
+    assert ast == {
+        "tag": "switch",
+        "condition": {"tag": "identifier", "value": "x"},
+        "cases": [{
+            "tag": "case",
+            "values": [{"tag": "number", "value": 1}],
+            "body": {
+                "tag": "statement_list",
+                "statements": [{"tag": "print", "value": {"tag": "number", "value": 1}}]
+            }
+        }]
+    }
+    
+    # Switch with multiple cases
+    ast, tokens = parse_switch_statement(tokenize("""
+        switch (x) {
+            case 1: { print "one" }
+            case 2: { print "two" }
+            case 3: { print "three" }
+        }
+    """))
+    assert ast == {
+        "tag": "switch",
+        "condition": {"tag": "identifier", "value": "x"},
+        "cases": [
+            {
+                "tag": "case",
+                "values": [{"tag": "number", "value": 1}],
+                "body": {
+                    "tag": "statement_list",
+                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "one"}}]
+                }
+            },
+            {
+                "tag": "case",
+                "values": [{"tag": "number", "value": 2}],
+                "body": {
+                    "tag": "statement_list",
+                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "two"}}]
+                }
+            },
+            {
+                "tag": "case",
+                "values": [{"tag": "number", "value": 3}],
+                "body": {
+                    "tag": "statement_list",
+                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "three"}}]
+                }
+            }
+        ]
+    }
+    
+    # Switch with default statement
+    ast, tokens = parse_switch_statement(tokenize("""
+        switch (x) {
+            case 1: { print "one" }
+            default: { print "other" }
+        }
+    """))
+    assert ast == {
+        "tag": "switch",
+        "condition": {"tag": "identifier", "value": "x"},
+        "cases": [{
+            "tag": "case",
+            "values": [{"tag": "number", "value": 1}],
+            "body": {
+                "tag": "statement_list",
+                "statements": [{"tag": "print", "value": {"tag": "string", "value": "one"}}]
+            }
+        }],
+        "default": {
+            "tag": "default",
+            "body": {
+                "tag": "statement_list",
+                "statements": [{"tag": "print", "value": {"tag": "string", "value": "other"}}]
+            }
+        }
+    }
+    
+    # Switch with multi-value cases
+    ast, tokens = parse_switch_statement(tokenize("""
+        switch (day) {
+            case 1, 7: { print "weekend" }
+            case 2, 3, 4, 5, 6: { print "weekday" }
+        }
+    """))
+    assert ast == {
+        "tag": "switch",
+        "condition": {"tag": "identifier", "value": "day"},
+        "cases": [
+            {
+                "tag": "case",
+                "values": [
+                    {"tag": "number", "value": 1},
+                    {"tag": "number", "value": 7}
+                ],
+                "body": {
+                    "tag": "statement_list",
+                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "weekend"}}]
+                }
+            },
+            {
+                "tag": "case",
+                "values": [
+                    {"tag": "number", "value": 2},
+                    {"tag": "number", "value": 3},
+                    {"tag": "number", "value": 4},
+                    {"tag": "number", "value": 5},
+                    {"tag": "number", "value": 6}
+                ],
+                "body": {
+                    "tag": "statement_list",
+                    "statements": [{"tag": "print", "value": {"tag": "string", "value": "weekday"}}]
+                }
+            }
+        ]
+    }
+    
+    # Empty switch
+    ast, tokens = parse_switch_statement(tokenize("switch (x) {}"))
+    assert ast == {
+        "tag": "switch",
+        "condition": {"tag": "identifier", "value": "x"},
+        "cases": []
+    }
+    
+    # Switch with only default
+    ast, tokens = parse_switch_statement(tokenize("switch (x) { default: { print 1 } }"))
+    assert ast == {
+        "tag": "switch",
+        "condition": {"tag": "identifier", "value": "x"},
+        "cases": [],
+        "default": {
+            "tag": "default",
+            "body": {
+                "tag": "statement_list",
+                "statements": [{"tag": "print", "value": {"tag": "number", "value": 1}}]
+            }
+        }
+    }
+    
+    # Switch with expression as condition
+    ast, tokens = parse_switch_statement(tokenize("switch (x + 1) { case 1: { print 1 } }"))
+    assert ast == {
+        "tag": "switch",
+        "condition": {
+            "tag": "+",
+            "left": {"tag": "identifier", "value": "x"},
+            "right": {"tag": "number", "value": 1}
+        },
+        "cases": [{
+            "tag": "case",
+            "values": [{"tag": "number", "value": 1}],
+            "body": {
+                "tag": "statement_list",
+                "statements": [{"tag": "print", "value": {"tag": "number", "value": 1}}]
+            }
+        }]
+    }
+    
+    # Switch with break statements
+    ast, tokens = parse_switch_statement(tokenize("""
+        switch (x) {
+            case 1: { print 1; break }
+            case 2: { print 2; break }
+            default: { print "other" }
+        }
+    """))
+    assert ast["tag"] == "switch"
+    assert len(ast["cases"]) == 2
+    assert ast["cases"][0]["body"]["statements"][-1]["tag"] == "break"
+    assert ast["cases"][1]["body"]["statements"][-1]["tag"] == "break"
+    assert "default" in ast
+
+def parse_case_statement(tokens):
+    """
+    case_statement = "case" expression { "," expression } ":" statement_list
+    """
+    assert tokens[0]["tag"] == "case", f"Expected 'case' at position {tokens[0]['position']}"
+    tokens = tokens[1:]
+    
+    # Parse first case value
+    values = []
+    value, tokens = parse_expression(tokens)
+    values.append(value)
+    
+    # Parse additional case values (case 1, 2, 3:)
+    while tokens[0]["tag"] == ",":
+        tokens = tokens[1:]
+        value, tokens = parse_expression(tokens)
+        values.append(value)
+    
+    # Expect colon
+    assert tokens[0]["tag"] == ":", f"Expected ':' at position {tokens[0]['position']}"
+    tokens = tokens[1:]
+    
+    # Parse the statement block
+    body, tokens = parse_statement_list(tokens)
+    
+    return {"tag": "case", "values": values, "body": body}, tokens
+
+def test_parse_case_statement():
+    """
+    case_statement = "case" expression { "," expression } ":" statement_list
+    """
+    print("testing parse_case_statement...")
+    
+    # Single value case
+    ast, tokens = parse_case_statement(tokenize("case 1: { print 1 }"))
+    assert ast == {
+        "tag": "case",
+        "values": [{"tag": "number", "value": 1}],
+        "body": {
+            "tag": "statement_list",
+            "statements": [{"tag": "print", "value": {"tag": "number", "value": 1}}]
+        }
+    }
+    
+    # Multiple values case
+    ast, tokens = parse_case_statement(tokenize("case 1, 2, 3: { print \"multiple\" }"))
+    assert ast == {
+        "tag": "case",
+        "values": [
+            {"tag": "number", "value": 1},
+            {"tag": "number", "value": 2},
+            {"tag": "number", "value": 3}
+        ],
+        "body": {
+            "tag": "statement_list",
+            "statements": [{"tag": "print", "value": {"tag": "string", "value": "multiple"}}]
+        }
+    }
+    
+    # Case with string value
+    ast, tokens = parse_case_statement(tokenize('case "hello": { print "world" }'))
+    assert ast == {
+        "tag": "case",
+        "values": [{"tag": "string", "value": "hello"}],
+        "body": {
+            "tag": "statement_list",
+            "statements": [{"tag": "print", "value": {"tag": "string", "value": "world"}}]
+        }
+    }
+    
+    # Case with expression
+    ast, tokens = parse_case_statement(tokenize("case x + 1: { print x }"))
+    assert ast == {
+        "tag": "case",
+        "values": [{
+            "tag": "+",
+            "left": {"tag": "identifier", "value": "x"},
+            "right": {"tag": "number", "value": 1}
+        }],
+        "body": {
+            "tag": "statement_list",
+            "statements": [{"tag": "print", "value": {"tag": "identifier", "value": "x"}}]
+        }
+    }
+    
+    # Case with empty body
+    ast, tokens = parse_case_statement(tokenize("case 1: {}"))
+    assert ast == {
+        "tag": "case",
+        "values": [{"tag": "number", "value": 1}],
+        "body": {"tag": "statement_list", "statements": []}
+    }
+    
+    # Case with multiple statements
+    ast, tokens = parse_case_statement(tokenize("case 1: { x = 5; print x; break }"))
+    assert ast == {
+        "tag": "case",
+        "values": [{"tag": "number", "value": 1}],
+        "body": {
+            "tag": "statement_list",
+            "statements": [
+                {
+                    "tag": "assign",
+                    "target": {"tag": "identifier", "value": "x"},
+                    "value": {"tag": "number", "value": 5}
+                },
+                {"tag": "print", "value": {"tag": "identifier", "value": "x"}},
+                {"tag": "break"}
+            ]
+        }
+    }
+
+
+def parse_default_statement(tokens):
+    """
+    default_statement = "default" ":" statement_list
+    """
+    assert tokens[0]["tag"] == "default", f"Expected 'default' at position {tokens[0]['position']}"
+    tokens = tokens[1:]
+    
+    assert tokens[0]["tag"] == ":", f"Expected ':' at position {tokens[0]['position']}"
+    tokens = tokens[1:]
+    
+    body, tokens = parse_statement_list(tokens)
+    
+    return {"tag": "default", "body": body}, tokens
+
+def test_parse_default_statement():
+    """
+    default_statement = "default" ":" statement_list
+    """
+    print("testing parse_default_statement...")
+    
+    # Basic default statement
+    ast, tokens = parse_default_statement(tokenize("default: { print \"default\" }"))
+    assert ast == {
+        "tag": "default",
+        "body": {
+            "tag": "statement_list",
+            "statements": [{"tag": "print", "value": {"tag": "string", "value": "default"}}]
+        }
+    }
+    
+    # Empty default statement
+    ast, tokens = parse_default_statement(tokenize("default: {}"))
+    assert ast == {
+        "tag": "default",
+        "body": {"tag": "statement_list", "statements": []}
+    }
+    
+    # Default with multiple statements
+    ast, tokens = parse_default_statement(tokenize("default: { print 1; print 2; print 3 }"))
+    assert ast == {
+        "tag": "default",
+        "body": {
+            "tag": "statement_list",
+            "statements": [
+                {"tag": "print", "value": {"tag": "number", "value": 1}},
+                {"tag": "print", "value": {"tag": "number", "value": 2}},
+                {"tag": "print", "value": {"tag": "number", "value": 3}}
+            ]
+        }
+    }
 
 def parse_if_statement(tokens):
     """
@@ -1277,12 +1674,14 @@ def test_parse_function_statement():
 
 def parse_statement(tokens):
     """
-    statement = if_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
+    statement = if_statement | switch_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
     """
     tag = tokens[0]["tag"]
     # note: none of these consumes a token
     if tag == "if":
         return parse_if_statement(tokens)
+    if tag == "switch":
+        return parse_switch_statement(tokens)
     if tag == "while":
         return parse_while_statement(tokens)
     if tag == "function":
@@ -1306,7 +1705,7 @@ def parse_statement(tokens):
 
 def test_parse_statement():
     """
-    statement = if_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
+    statement = if_statement | switch_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
     """
     print("testing parse_statement...")
 
@@ -1314,6 +1713,11 @@ def test_parse_statement():
     assert (
         parse_statement(tokenize("if(1){print 1}"))[0]
         == parse_if_statement(tokenize("if(1){print 1}"))[0]
+    )
+    # switch statement
+    assert (
+        parse_statement(tokenize("switch(1){case 1: {print 5}}"))
+        == parse_switch_statement(tokenize("switch(1){case 1: {print 5}}"))
     )
     # # while statement
     assert (
@@ -1458,6 +1862,9 @@ if __name__ == "__main__":
         test_parse_assignment_expression,
         test_parse_expression,
         test_parse_statement_list,
+        test_parse_switch_statement,
+        test_parse_case_statement,
+        test_parse_default_statement,
         test_parse_if_statement,
         test_parse_while_statement,
         test_parse_return_statement,

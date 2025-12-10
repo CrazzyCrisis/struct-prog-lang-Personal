@@ -19,6 +19,9 @@ patterns = [
     [r"print", "print"],  # print keyword
     [r"import", "import"],  # import keyword
     [r"exit", "exit"],  # exit keyword
+    [r"switch", "switch"], # switch keyword # PROJECT ADDITION
+    [r"case", "case"], # case keyword # Project Addition
+    [r"default", "default"], # default keyword # Project Addition
     [r"and", "&&"],  # alternate for &&
     [r"or", "||"],  # alternate for ||
     [r"not", "!"],  # alternate for !
@@ -249,6 +252,9 @@ def test_keywords():
         "import",  # (reserved for future use)
         "print",
         "exit",
+        "switch",
+        "case",
+        "default"
     ]:
         t = remove_line_info(tokenize(keyword))
         assert len(t) == 2
