@@ -131,6 +131,23 @@ def ast_to_string(ast):
     if ast["tag"] == "import":
         return "import " + ast_to_string(ast["value"])
 
+    if ast["tag"] == "switch":
+        s = "switch (" + ast_to_string(ast["condition"]) + ") {"
+        for case in ast["cases"]:
+            case_values = ",".join([ast_to_string(v) for v in case["values"]])
+            s += "case " + case_values + ": " + ast_to_string(case["body"])
+        if "default" in ast and ast["default"]:
+            s += "default: " + ast_to_string(ast["default"]["body"])
+        s += "}"
+        return s
+    
+    if ast["tag"] == "case":
+        values = ",".join([ast_to_string(v) for v in ast["values"]])
+        return "case " + values + ": " + ast_to_string(ast["body"])
+    
+    if ast["tag"] == "default":
+        return "default: " + ast_to_string(ast["body"])
+
     assert False, f"Unknown tag [{ast['tag']}] in AST"
 
 __builtin_functions = [
@@ -398,6 +415,55 @@ def evaluate(ast, environment):
             condition_value, cond_status = evaluate(ast["condition"], environment)
             if cond_status == "exit": return condition_value, "exit"
         return None, None # Normal loop termination (condition false or break occurred)
+    
+    if ast["tag"] == "switch":
+        # Evaluate the condition
+        condition_value, cond_status = evaluate(ast["condition"], environment)
+        if cond_status == "exit": 
+            return condition_value, "exit"
+        
+        # Try to match against each case
+        matched = False
+        for case in ast["cases"]:
+            # Check if condition matches any of the case values
+            for case_value_ast in case["values"]:
+                case_val, case_status = evaluate(case_value_ast, environment)
+                if case_status == "exit": 
+                    return case_val, "exit"
+                
+                if condition_value == case_val:
+                    matched = True
+                    break
+            
+            # If matched, execute the case body
+            if matched:
+                val, body_status = evaluate(case["body"], environment)
+                
+                if body_status == "return" or body_status == "exit":
+                    return val, body_status  # Propagate critical exits
+                if body_status == "break":
+                    return None, None  # Break exits the switch, switch completes normally
+                if body_status == "continue":
+                    raise Exception("'continue' statement not valid in switch (must be in loop)")
+                
+                # If no break, execution falls through to next case
+                return val, None
+        
+        # If no case matched, try the default clause
+        if "default" in ast and ast["default"]:
+            val, default_status = evaluate(ast["default"]["body"], environment)
+            
+            if default_status == "return" or default_status == "exit":
+                return val, default_status
+            if default_status == "break":
+                return None, None  # Break exits the switch
+            if default_status == "continue":
+                raise Exception("'continue' statement not valid in switch (must be in loop)")
+            
+            return val, None
+        
+        # No match and no default
+        return None, None
 
     if ast["tag"] == "statement_list":
         last_value = None
@@ -666,6 +732,16 @@ def test_evaluate_if_statement():
     equals("if(0) {x=1}", {"x": 0}, None, {"x": 0})
     equals("if(1) {x=1} else {x=2}", {"x": 0}, None, {"x": 1})
     equals("if(0) {x=1} else {x=2}", {"x": 0}, None, {"x": 2})
+
+def test_evaluate_switch_statement():
+    print("test evaluate_switch_statement")
+    equals("x=1; switch(x) { case 1: { y=10 } }", {}, 10, {"x": 1, "y": 10})
+    equals("x=2; switch(x) { case 1: { y=10 } case 2: { y=20 } }", {}, 20, {"x": 2, "y": 20})
+    equals("x=99; switch(x) { case 1: { y=10 } default: { y=999 } }", {}, 999, {"x": 99, "y": 999})
+    equals("x=7; switch(x) { case 1, 7: { y=100 } }", {}, 100, {"x": 7, "y": 100})
+    equals("x=1; switch(x) { case 1: { y=10; break; y=99 } }", {}, None, {"x": 1, "y": 10})
+    equals("x=1; switch(x) { case 1: { y=10; case 2: y=99 } }", {}, 99, {"x": 1, "y": 10})
+    equals('s="hello"; switch(s) { case "world": { y=1 } case "hello": { y=2 } }', {}, 2, {"s": "hello", "y": 2})
 
 
 def test_evaluate_while_statement():
@@ -1047,6 +1123,7 @@ if __name__ == "__main__":
     test_evaluate_negation()
     # test_evaluate_print_statement()
     test_evaluate_if_statement()
+    test_evaluate_switch_statement()
     test_evaluate_while_statement()
     test_evaluate_assignment_statement()
     test_evaluate_function_literal()
