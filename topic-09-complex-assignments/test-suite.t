@@ -596,10 +596,5 @@ if (counter > 20) {
     counter = 999
 };
 
-function increment() {
-    extern counter = counter + 1000
-};
-increment();
-
 print "Final counter value:";
 print counter;
